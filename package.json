@@ -18,5 +18,23 @@
   },
   "peerDependencies": {
     "whatwg-url": "7.1.0"
+  },
+  "pluginParameters": {
+    "type": "object",
+    "required": ["tonPrivateKey"],
+    "properties": {
+      "tonPrivateKey": {
+        "type": "string",
+        "description": "TON private key"
+      },
+      "tonRpcUrl": {
+        "type": "string",
+        "description": "TON RPC URL"
+      }
+    }
+  },
+  "pluginEnv": {
+    "TON_PRIVATE_KEY": "tonPrivateKey",
+    "TON_RPC_URL": "tonRpcUrl"
   }
 }
