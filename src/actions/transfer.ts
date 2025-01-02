@@ -131,13 +131,19 @@ export default {
     name: "SEND_TOKEN",
     similes: ["SEND_TOKENS", "TOKEN_TRANSFER", "MOVE_TOKENS", "SEND_TON"],
     description: "Transfer tokens from the agent's wallet to another",
-    handler: async (
+    handler: async ({
+        runtime,
+        message,
+        state,
+        options,
+        callback,
+    }: {
         runtime: IAgentRuntime,
         message: Memory,
         state: State,
         options: any,
         callback?: HandlerCallback
-    ) => {
+    }): Promise<boolean> => {
         elizaLogger.log("Starting SEND_TOKEN handler...");
 
         const transferDetails = await buildTransferDetails(
