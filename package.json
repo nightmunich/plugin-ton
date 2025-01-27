@@ -33,5 +33,20 @@
     },
     "peerDependencies": {
         "whatwg-url": "7.1.0"
+    },
+
+    "agentConfig": {
+        "pluginType": "elizaos:client:1.0.0",
+        "pluginParameters": {
+            "TON_PRIVATE_KEY": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Ton private key is required"
+            },
+            "TON_RPC_URL": {
+                "type": "string",
+                "description": "TON network RPC endpoint URL"
+            }
+        }
     }
 }
