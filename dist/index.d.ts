@@ -1,10 +1,11 @@
 import { ICacheManager, IAgentRuntime, Memory, State, HandlerCallback, Plugin } from '@elizaos/core';
 import { WalletContractV4, TonClient } from '@ton/ton';
 import { KeyPair } from '@ton/crypto';
+import BigNumber from 'bignumber.js';
 
 interface Prices {
     nativeToken: {
-        usd: string;
+        usd: BigNumber;
     };
 }
 declare class WalletProvider {
@@ -14,6 +15,7 @@ declare class WalletProvider {
     wallet: WalletContractV4;
     private cache;
     private cacheKey;
+    private rpcApiKey;
     constructor(keypair: KeyPair, endpoint: string, cacheManager: ICacheManager);
     private readFromCache;
     private writeToCache;
@@ -29,13 +31,16 @@ declare class WalletProvider {
     getWalletBalance(): Promise<bigint | null>;
 }
 
+interface ActionOptions {
+    [key: string]: unknown;
+}
 declare const _default: {
     name: string;
     similes: string[];
     description: string;
-    handler: (runtime: IAgentRuntime, message: Memory, state: State, options: any, callback?: HandlerCallback) => Promise<boolean>;
+    handler: (runtime: IAgentRuntime, message: Memory, state: State, _options: ActionOptions, callback?: HandlerCallback) => Promise<boolean>;
     template: string;
-    validate: (runtime: IAgentRuntime) => Promise<boolean>;
+    validate: (_runtime: IAgentRuntime) => Promise<boolean>;
     examples: ({
         user: string;
         content: {
