@@ -98,6 +98,9 @@ export class TonConnectWalletProvider extends BaseCachedProvider {
         this.state.connected = true;
         super.setCachedData("wallet",this.wallet)
 
+        if (this.wallet.connected) {
+            elizaLogger.log("WALLET CONNECTED");
+        }
         // Listen for status changes
         // this.wallet.onStatusChange((wallet) => {
         //     if (!wallet) {
