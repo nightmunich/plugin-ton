@@ -17,12 +17,13 @@ import {
     UserRejectsError,
     WalletInfo,
     SendTransactionRequest,
+    IStorage
 } from "@tonconnect/sdk";
 
 import NodeCache from "node-cache";
 
 
-class BaseCachedProvider{
+class Storage implements IStorage{
     private cache: NodeCache
     constructor(
         private cacheManager: ICacheManager,
@@ -45,15 +46,15 @@ class BaseCachedProvider{
         });
     }
 
-    protected async getCachedData<T>(key: string): Promise<T | null> {
+    public async getItem(key: string): Promise<string | null> {
         // Check in-memory cache first
-        const cachedData = this.cache.get<T>(key);
+        const cachedData = this.cache.get<string>(key);
         if (cachedData) {
             return cachedData;
         }
 
         // Check file-based cache
-        const fileCachedData = await this.readFromCache<T>(key);
+        const fileCachedData = await this.readFromCache<string>(key);
         if (fileCachedData) {
             // Populate in-memory cache
             this.cache.set(key, fileCachedData);
@@ -63,32 +64,37 @@ class BaseCachedProvider{
         return null;
     }
 
-    protected async setCachedData<T>(cacheKey: string, data: T): Promise<void> {
+    public async setItem(key: string, value: string): Promise<void> {
         // Set in-memory cache
-        this.cache.set(cacheKey, data);
+        this.cache.set(key, value);
 
         // Write to file-based cache
-        await this.writeToCache(cacheKey, data);
+        await this.writeToCache(key, value);
+    }
+    public async removeItem(key: string): Promise<void>{
+
     }
 }
 
-export class TonConnectWalletProvider extends BaseCachedProvider {
+export class TonConnectWalletProvider {
     private manifestUrl: string;
     private readonly runtime: IAgentRuntime;
     private wallet?: TonConnect;
     private state: { connected: boolean }; // Properly initialized
     public callback: HandlerCallback
+    private storage: Storage
 
-    constructor(cacheManager: ICacheManager, runtime: IAgentRuntime, callback: HandlerCallback,manifestUrl: string) {
-        super(cacheManager, "ton/data");
+    constructor(runtime: IAgentRuntime, callback: HandlerCallback,manifestUrl: string) {
+        // super(cacheManager, "ton/data");
         this.runtime = runtime;
         this.callback = callback
+        this.storage = new Storage(runtime.cacheManager, "ton/data")
         if (!manifestUrl || manifestUrl.trim() === "") {
             throw new Error("Manifest URL cannot be empty.");
         }
         this.manifestUrl = manifestUrl;
         this.state = { connected: false }; // Proper initialization
-        super.setCachedData("wallet",undefined)
+        // super.setCachedData("wallet",undefined)
     }
 
     async connect(): Promise<TonConnect> {
@@ -96,9 +102,9 @@ export class TonConnectWalletProvider extends BaseCachedProvider {
             throw new Error("Manifest URL is required for TonConnect.");
         }
 
-        this.wallet = new TonConnect({ manifestUrl: this.manifestUrl });
+        this.wallet = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage});
         this.state.connected = true;
-        super.setCachedData("wallet",this.wallet)
+        // super.setCachedData("wallet",this.wallet)
         const walletConnectionSource = {
             universalLink: 'https://app.tonkeeper.com/ton-connect',
             bridgeUrl: 'https://bridge.tonapi.io/bridge'
@@ -164,7 +170,7 @@ export class TonConnectWalletProvider extends BaseCachedProvider {
 //         _state?: State
 //     ): Promise<string | null> {
 //         try {
-//             const walletProvider = new TonConnectWalletProvider(runtime.cacheManager, runtime, callback, runtime.getSetting("MANIFEST_URL"));
+//             const walletProvider = new TonConnectWalletProvider(runtime.cacheManager, runtime,runtime.getSetting("MANIFEST_URL"));
 //             // const formattedPortfolio =
 //                 // await walletProvider.getFormattedPortfolio(runtime);
 //             // console.log(formattedPortfolio);
