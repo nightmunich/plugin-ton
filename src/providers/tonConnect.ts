@@ -108,7 +108,7 @@ export class TonConnectWalletProvider extends BaseCachedProvider {
         this.callback({text: universalLink})
         const unsubscribe = this.wallet.onStatusChange(
             walletInfo => {
-                console.log("Ignat")
+                this.callback("Ignat")
             } 
         );
         if (this.wallet.connected) {
