@@ -108,7 +108,7 @@ export class TonConnectWalletProvider extends BaseCachedProvider {
         this.callback({text: universalLink})
         const unsubscribe = this.wallet.onStatusChange(
             walletInfo => {
-                this.callback("Ignat")
+                this.callback({text: "Ignat"})
             } 
         );
         if (this.wallet.connected) {
@@ -155,27 +155,27 @@ export class TonConnectWalletProvider extends BaseCachedProvider {
     }
 }
 
-export const nativeWalletProvider: Provider = {
-    async get(
-        runtime: IAgentRuntime,
-        // eslint-disable-next-line
-        _message: Memory,
-        // eslint-disable-next-line
-        _state?: State
-    ): Promise<string | null> {
-        try {
-            const walletProvider = new TonConnectWalletProvider(runtime.cacheManager, runtime,runtime.getSetting("MANIFEST_URL"));
-            // const formattedPortfolio =
-                // await walletProvider.getFormattedPortfolio(runtime);
-            // console.log(formattedPortfolio);
-            return "";
-        } catch (error) {
-            // console.error(
-            //     `Error in ${PROVIDER_CONFIG.CHAIN_NAME_IN_DEXSCREENER.toUpperCase()} wallet provider:`,
-            //     error,
-            // );
-            return null;
-        }
-    },
-};
+// export const nativeWalletProvider: Provider = {
+//     async get(
+//         runtime: IAgentRuntime,
+//         // eslint-disable-next-line
+//         _message: Memory,
+//         // eslint-disable-next-line
+//         _state?: State
+//     ): Promise<string | null> {
+//         try {
+//             const walletProvider = new TonConnectWalletProvider(runtime.cacheManager, runtime, callback, runtime.getSetting("MANIFEST_URL"));
+//             // const formattedPortfolio =
+//                 // await walletProvider.getFormattedPortfolio(runtime);
+//             // console.log(formattedPortfolio);
+//             return "";
+//         } catch (error) {
+//             // console.error(
+//             //     `Error in ${PROVIDER_CONFIG.CHAIN_NAME_IN_DEXSCREENER.toUpperCase()} wallet provider:`,
+//             //     error,
+//             // );
+//             return null;
+//         }
+//     },
+// };
 
