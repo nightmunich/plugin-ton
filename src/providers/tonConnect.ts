@@ -5,6 +5,7 @@ import {
     Provider,
     ICacheManager,
     State,
+    type HandlerCallback
 } from "@elizaos/core";
 
 import * as path from "node:path";
@@ -26,7 +27,7 @@ class BaseCachedProvider{
     constructor(
         private cacheManager: ICacheManager,
         private cacheKey,
-        ttl?: number
+        ttl?: number,
     ) {
         this.cache = new NodeCache({ stdTTL: ttl || 300 });
     }
@@ -76,11 +77,12 @@ export class TonConnectWalletProvider extends BaseCachedProvider {
     private readonly runtime: IAgentRuntime;
     private wallet?: TonConnect;
     private state: { connected: boolean }; // Properly initialized
+    public callback: HandlerCallback
 
-    constructor(cacheManager: ICacheManager, runtime: IAgentRuntime, manifestUrl: string) {
+    constructor(cacheManager: ICacheManager, runtime: IAgentRuntime, callback: HandlerCallback,manifestUrl: string) {
         super(cacheManager, "ton/data");
         this.runtime = runtime;
-
+        this.callback = callback
         if (!manifestUrl || manifestUrl.trim() === "") {
             throw new Error("Manifest URL cannot be empty.");
         }
@@ -97,7 +99,18 @@ export class TonConnectWalletProvider extends BaseCachedProvider {
         this.wallet = new TonConnect({ manifestUrl: this.manifestUrl });
         this.state.connected = true;
         super.setCachedData("wallet",this.wallet)
-
+        const walletConnectionSource = {
+            universalLink: 'https://app.tonkeeper.com/ton-connect',
+            bridgeUrl: 'https://bridge.tonapi.io/bridge'
+        }
+        
+        const universalLink = this.wallet.connect(walletConnectionSource);
+        this.callback({text: universalLink})
+        const unsubscribe = this.wallet.onStatusChange(
+            walletInfo => {
+                console.log("Ignat")
+            } 
+        );
         if (this.wallet.connected) {
             elizaLogger.log("WALLET CONNECTED");
         }
