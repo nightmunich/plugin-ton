@@ -4,7 +4,8 @@ import { WalletProvider } from "./providers/wallet.ts";
 import tonConnectInitAction from "./actions/tonConnectInit.ts";
 import tonConnectTransferAction from "./actions/tonConnectTransfer.ts";
 
-import { TonConnectWalletProvider, nativeWalletProvider } from "./providers/tonConnect.ts";
+import { TonConnectWalletProvider } from "./providers/tonConnect.js";
+// import { TonConnectWalletProvider, nativeWalletProvider } from "./providers/tonConnect.ts";
 
 export { WalletProvider,
     TonConnectWalletProvider,
@@ -18,7 +19,8 @@ export const tonPlugin: Plugin = {
     description: "Ton Plugin for Eliza",
     actions: [transferAction, tonConnectInitAction, tonConnectTransferAction],
     evaluators: [],
-    providers: [nativeWalletProvider],
+    // providers: [nativeWalletProvider],
+    providers: [],
 };
 
 export default tonPlugin;
