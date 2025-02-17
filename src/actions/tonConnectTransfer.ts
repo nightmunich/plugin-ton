@@ -64,9 +64,9 @@ export class TransferAction {
 
         const connector = await this.tonConnectProvider.connect();
 
-        if (!connector.connected) {
-            elizaLogger.error('Please connect wallet to send the transaction!');
-        }
+        // if (!connector.connected) {
+        //     elizaLogger.error('Please connect wallet to send the transaction!');
+        // }
         
         const transaction = {
             validUntil: Math.floor(Date.now() / 1000) + 60, // 60 sec
@@ -178,11 +178,11 @@ export default {
             // TODO check token balance before transfer
             // const walletProvider = await initWalletProvider(runtime);
             const tonConnectProvider = new TonConnectWalletProvider(
-                runtime.cacheManager,
                 runtime,
                 callback,
                 runtime.getSetting("TON_CONNECT_MANIFEST_URL") ?? null,
             );
+            // const provider = tonConnectProvider.connect();
 
             const action = new TransferAction(tonConnectProvider);
             const hash = await action.transfer(transferDetails);
