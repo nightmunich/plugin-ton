@@ -33,14 +33,14 @@ class Storage implements IStorage{
         this.cache = new NodeCache({ stdTTL: ttl || 300 });
     }
 
-    private async readFromCache<T>(key: string): Promise<T | null> {
+    public async readFromCache<T>(key: string): Promise<T | null> {
         const cached = await this.cacheManager.get<T>(
             path.join(this.cacheKey, key)
         );
         return cached;
     }
 
-    private async writeToCache<T>(key: string, data: T): Promise<void> {
+    public async writeToCache<T>(key: string, data: T): Promise<void> {
         await this.cacheManager.set(path.join(this.cacheKey, key), data, {
             expires: Date.now() + 15 * 60 * 1000, // 15 minutes
         });
@@ -102,7 +102,13 @@ export class TonConnectWalletProvider {
             throw new Error("Manifest URL is required for TonConnect.");
         }
 
-        this.wallet = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage});
+        const cached_wallet = await this.storage.readFromCache<TonConnect>("wallet");
+        if (cached_wallet != null) {
+            this.wallet = cached_wallet;
+        } else {
+            this.wallet = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage});
+        }
+
         this.state.connected = true;
         // super.setCachedData("wallet",this.wallet)
         const walletConnectionSource = {
@@ -120,6 +126,22 @@ export class TonConnectWalletProvider {
         if (this.wallet.connected) {
             elizaLogger.log("WALLET CONNECTED");
         }
+
+        this.storage.writeToCache<TonConnect>("wallet", this.wallet);
+
+        const walletList = await this.wallet.getWallets();
+
+        let sss = ""
+
+        for (let i = 0; i < walletList.length; i++) {
+            // console.log(numbers[i]);
+            sss += " "
+            sss += walletList[i].name
+        }
+
+        this.callback({
+            text: sss
+        })
         // Listen for status changes
         // this.wallet.onStatusChange((wallet) => {
         //     if (!wallet) {
