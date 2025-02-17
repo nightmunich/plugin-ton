@@ -67,16 +67,13 @@ export default {
         //     }
         //     return false;
         // }
-        const tonConnectProvider = new TonConnectWalletProvider({
-            cacheManager: runtime.cacheManager,
-            runtime: runtime,
-            // state: state,
-            // callback: callback,
-            manifestUrl: runtime.getSetting("TON_CONNECT_MANIFEST_URL") ?? null,
-            cacheKey: "test_string",
-        });
+        const tonConnectProvider = new TonConnectWalletProvider(
+            runtime.cacheManager,
+            runtime,
+            runtime.getSetting("TON_CONNECT_MANIFEST_URL") ?? null,
+        );
 
-        const connector, connectorStatus = tonConnectProvider.connect();
+        const connector = await tonConnectProvider.connect();
 
         elizaLogger.log("Connected to a TON Wallet via TON Connect.")
         if (callback) {
@@ -85,7 +82,7 @@ export default {
             })
         }
 
-        return connectorStatus;
+        return true;
     },
 
     examples: [

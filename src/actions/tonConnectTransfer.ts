@@ -13,9 +13,10 @@ import { z } from "zod";
 
 export interface TransferContent extends Content {
     recipient: string;
-    amount: string | number;
+    // amount: string | number;
+    amount: string;
 }
-import { TonConnectWalletProvider } from "./providers/tonConnect.ts";
+import { TonConnectWalletProvider } from "../providers/tonConnect.ts";
 
 function isTransferContent(content: Content): content is TransferContent {
     elizaLogger.log("Content for transfer", content);
@@ -61,7 +62,7 @@ export class TransferAction {
         );
         // { recipient: 'xx', amount: '0\\.3'}
 
-        const connector = this.tonConnectProvider.connect();
+        const connector = await this.tonConnectProvider.connect();
 
         if (!connector.connected) {
             elizaLogger.error('Please connect wallet to send the transaction!');
@@ -83,6 +84,7 @@ export class TransferAction {
             // you can use signed boc to find the transaction 
             // const someTxData = await myAppExplorerService.getTransaction(result.boc);
             elizaLogger.log('Transaction was sent successfully.');
+            return "true";
         } catch (e) {
             // if (e instanceof UserRejectedError) {
             //     alert('You rejected the transaction. Please confirm it to send to the blockchain');
@@ -90,6 +92,7 @@ export class TransferAction {
             //     alert('Unknown error happened', e);
             // }
             elizaLogger.error('Transaction failed.')
+            return "false";
         }
     }
 }
@@ -174,15 +177,12 @@ export default {
         try {
             // TODO check token balance before transfer
             // const walletProvider = await initWalletProvider(runtime);
-            const tonConnectProvider = new TonConnectWalletProvider({
-                cacheManager: runtime.cacheManager,
-                runtime: runtime,
-                // state: state,
-                // callback: callback,
-                manifestUrl: runtime.getSetting("TON_CONNECT_MANIFEST_URL") ?? null,
-                cacheKey: "test_string",
-            });
-            
+            const tonConnectProvider = new TonConnectWalletProvider(
+                runtime.cacheManager,
+                runtime,
+                runtime.getSetting("TON_CONNECT_MANIFEST_URL") ?? null,
+            );
+
             const action = new TransferAction(tonConnectProvider);
             const hash = await action.transfer(transferDetails);
 
