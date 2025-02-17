@@ -121,6 +121,8 @@ export class TonConnectWalletProvider {
         const unsubscribe = this.wallet.onStatusChange(
             walletInfo => {
                 this.callback({text: "Ignat"})
+
+                this.storage.writeToCache("wallet", walletInfo)
             } 
         );
         if (this.wallet.connected) {
