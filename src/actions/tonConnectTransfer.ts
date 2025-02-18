@@ -57,7 +57,7 @@ export class TransferAction {
             `Transferring: ${params.amount} tokens to (${params.recipient})`,
         );
 
-        const connector = await this.tonConnectProvider.connect();
+        const connector = await this.tonConnectProvider.connect(undefined, undefined);
 
         if (!connector.connected) {
             elizaLogger.error('Please connect wallet to send the transaction!');

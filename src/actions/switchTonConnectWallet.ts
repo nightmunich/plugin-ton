@@ -21,13 +21,15 @@ const switchWalletTemplate = `Respond with a JSON markdown block containing only
 Example response:
 \`\`\`json
 {
-    "wallet_name": "Tonkeeper"
+    "walletName": "tonhub"
 }
 \`\`\`
 
 {{recentMessages}}
 
 Given the recent messages, extract the name of the desired wallet the user wants to switch to.
+
+There are such wallets out there: ["tonkeeper", "tonhub", "wallet"]. The walletName should always be one of these.
 
 Respond with a JSON markdown block containing only the extracted values.`;
 
@@ -70,8 +72,9 @@ export class SwitchWalletAction{
     }
 
     async checkSupportedWallet(walletName: string): Promise<{ universalLink?: string; bridgeUrl?: string } | null> {
+        const connector = await this.tonConnectWalletProvider.connect(undefined, undefined);
         const supportedWallets = await this.tonConnectWalletProvider.getSupportedWallets();
-    
+        elizaLogger.info(supportedWallets)
         const wallet = supportedWallets.find(w => w.name.toLowerCase() === walletName.toLowerCase());
     
         if (!wallet) return null; // If no wallet is found, return null
@@ -144,7 +147,7 @@ const buildSwitchWalletDetails= async (
         currentState = await runtime.updateRecentMessageState(currentState);
     }
     const walletSchema = z.object({
-        wallet_name: z.string(),
+        walletName: z.string(),
     });
     const walletContext = composeContext({
             state,
@@ -192,11 +195,12 @@ export default {
                     runtime,
                     state,
                     callback,
-                    runtime.getSetting("TON_CONNECT_MANIFEST_URL") ?? null,
+                    message
                 );
-
+                callback({text: walletDetails.walletName})
+                elizaLogger.info(`KAKA: ${walletDetails}`)
                 const action = new SwitchWalletAction(tonConnectProvider);
-
+                callback({text: walletDetails.walletName})
                 const { universalLink, bridgeUrl } = await action.checkSupportedWallet(walletDetails.walletName) || {};
                 if (universalLink == undefined || bridgeUrl == undefined)
                     throw new Error(`Switching failed: desired wallet is not supported`);
@@ -268,21 +272,21 @@ export default {
                 user: "{{user1}}",
                 content: {
                     text: "Switch my wallet in TonConnect",
-                    // action: "SEND_TON_TOKEN",
+                    action: "SWITCH_WALLET",
                 },
             },
             {
                 user: "{{user2}}",
                 content: {
                     text: "Okay! Write me the name of the wallet you want to switch on",
-                    // action: "SEND_TON_TOKEN",
+                    action: "SWITCH_WALLET",
                 },
             },
             {
                 user: "{{user1}}",
                 content: {
                     text: "I want to switch to Tonkeeper",
-                    // action: "SEND_TON_TOKEN",
+                    action: "SWITCH_WALLET",
                 },
             },
             {
@@ -297,21 +301,21 @@ export default {
                 user: "{{user1}}",
                 content: {
                     text: "I want to use another wallet in TonConnect",
-                    // action: "SEND_TON_TOKEN",
+                    action: "SWITCH_WALLET",
                 },
             },
             {
                 user: "{{user2}}",
                 content: {
                     text: "Select desired wallet from the list",
-                    // action: "SEND_TON_TOKEN",
+                    action: "SWITCH_WALLET",
                 },
             },
             {
                 user: "{{user1}}",
                 content: {
                     text: "I want to use Tonhub",
-                    // action: "SEND_TON_TOKEN",
+                    action: "SWITCH_WALLET",
                 },
             },
             {
