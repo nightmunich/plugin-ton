@@ -69,6 +69,7 @@ export default {
         // }
         const tonConnectProvider = new TonConnectWalletProvider(
             runtime,
+            state,
             callback,
             runtime.getSetting("TON_CONNECT_MANIFEST_URL") ?? null,
         );

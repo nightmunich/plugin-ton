@@ -17,7 +17,7 @@ export { WalletProvider,
 export const tonPlugin: Plugin = {
     name: "ton",
     description: "Ton Plugin for Eliza",
-    actions: [transferAction, tonConnectInitAction, tonConnectTransferAction],
+    actions: [tonConnectInitAction, tonConnectTransferAction],
     evaluators: [],
     // providers: [nativeWalletProvider],
     providers: [],
