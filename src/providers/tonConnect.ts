@@ -29,6 +29,7 @@ class Storage implements IStorage{
         this.cache = new NodeCache({ stdTTL: ttl || 300 });
     }
 
+
     public async readFromCache<T>(key: string): Promise<T | null> {
         const cached = await this.cacheManager.get<T>(
             path.join(this.cacheKey, key)
@@ -69,6 +70,8 @@ class Storage implements IStorage{
     }
     public async removeItem(key: string): Promise<void>{
         this.cache.del(key)
+
+        await this.cacheManager.delete(path.join(this.cacheKey, key));
     }
 }
 
@@ -153,9 +156,9 @@ export class TonConnectWalletProvider {
     async disconnect(): Promise<boolean> {
         if (!this.connector) return false;
         try {
-            await this.connector.disconnect();
-            this.state.connected = false;
-            this.connector = undefined;
+            // await this.connector.disconnect();
+
+            // this.connector = undefined;
             this.storage.removeItem("connector_tmp")
             return true;
         } catch (error) {
