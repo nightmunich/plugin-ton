@@ -102,6 +102,8 @@ export class TonConnectWalletProvider {
         return this.connector.connected
     }
 
+
+
     async connect(universalLink: string, bridgeUrl: string): Promise<TonConnect> {
         if (!this.manifestUrl) {
             throw new Error("Manifest URL is required for TonConnect.");
