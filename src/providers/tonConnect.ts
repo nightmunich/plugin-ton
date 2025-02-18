@@ -9,19 +9,13 @@ import {
 } from "@elizaos/core";
 
 import * as path from "node:path";
+import NodeCache from "node-cache";
 
 import {
     TonConnect,
-    WalletInfoRemote,
-    isWalletInfoRemote,
-    UserRejectsError,
-    WalletInfo,
     Wallet,
-    SendTransactionRequest,
     IStorage
 } from "@tonconnect/sdk";
-
-import NodeCache from "node-cache";
 
 
 class Storage implements IStorage{
@@ -49,7 +43,7 @@ class Storage implements IStorage{
 
     public async getItem(key: string): Promise<string | null> {
         // Check in-memory cache first
-        const cachedData = this.cache.get<string>(key);
+        const cachedData = this.cache.get<string>(path.join(this.cacheKey, key));
         if (cachedData) {
             return cachedData;
         }
@@ -58,7 +52,7 @@ class Storage implements IStorage{
         const fileCachedData = await this.readFromCache<string>(key);
         if (fileCachedData) {
             // Populate in-memory cache
-            this.cache.set(key, fileCachedData);
+            this.cache.set(path.join(this.cacheKey, key), fileCachedData);
             return fileCachedData;
         }
 
@@ -67,7 +61,7 @@ class Storage implements IStorage{
 
     public async setItem(key: string, value: string): Promise<void> {
         // Set in-memory cache
-        this.cache.set(key, value);
+        this.cache.set(path.join(this.cacheKey, key), value);
 
         // Write to file-based cache
         await this.writeToCache(key, value);
@@ -80,24 +74,27 @@ class Storage implements IStorage{
 export class TonConnectWalletProvider {
     private manifestUrl: string;
     private readonly runtime: IAgentRuntime;
-    private wallet?: TonConnect;
+    private connector?: TonConnect;
     private state: { connected: boolean }; // Properly initialized
     public callback: HandlerCallback
     private storage: Storage
     private state_: State
+    private message: Memory
 
-    constructor(runtime: IAgentRuntime, state: State, callback: HandlerCallback, manifestUrl: string) {
+    constructor(runtime: IAgentRuntime, state: State, callback: HandlerCallback, message: Memory) {
         // super(cacheManager, "ton/data");
         this.runtime = runtime;
         this.state_ = state;
-        this.callback = callback
-        this.storage = new Storage(runtime.cacheManager, "ton/data")
-        if (!manifestUrl || manifestUrl.trim() === "") {
+        this.callback = callback;
+        this.storage = new Storage(runtime.cacheManager, `ton/data/${message.userId}`);
+        this.manifestUrl = runtime.getSetting("TON_CONNECT_MANIFEST_URL") ?? null;
+        if (!this.manifestUrl || this.manifestUrl.trim() === "") {
             throw new Error("Manifest URL cannot be empty.");
         }
-        this.manifestUrl = manifestUrl;
-        this.state = { connected: false }; // Proper initialization
-        // super.setCachedData("wallet",undefined)
+
+        // this.state = { connected: false }; // Proper initialization
+        this.message = message;
+        // super.setCachedData("connector",undefined)
     }
 
     async connect(): Promise<TonConnect> {
@@ -105,93 +102,43 @@ export class TonConnectWalletProvider {
             throw new Error("Manifest URL is required for TonConnect.");
         }
 
-        // const cached_wallet = await this.storage.readFromCache<Wallet>("wallet");
-        // if (cached_wallet != null) {
-        //     this.wallet = cached_wallet;
-        //     new TonConnect({
-        //         wa
-        //     })
-        // } else {
-        //     this.wallet = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage});
-        //     this.wallet.s
-        // }
-        // await this.storage.readFromCache
-        const cached_wallet = await this.storage.readFromCache<Wallet>("wallet_tmp")
+        elizaLogger.info(this.message.userId);
+        const cached_wallet = await this.storage.readFromCache<Wallet>("wallet");
+        this.connector = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage}); 
         
-        if (cached_wallet != null) {
-            // elizaLogger.info()
-            elizaLogger.info(cached_wallet.provider);
-
-            this.wallet = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage}); 
-            await this.wallet.restoreConnection();
-            return this.wallet
+        if (cached_wallet) {
+            await this.connector.restoreConnection();
+            elizaLogger.info("The wallet was cached, restored connection!");
+            return this.connector
         }
-        this.wallet = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage}); 
-        // this.wallet.restoreConnection();
 
 
-        this.state.connected = true;
-        // super.setCachedData("wallet",this.wallet)
         const walletConnectionSource = {
             universalLink: 'https://app.tonkeeper.com/ton-connect',
             bridgeUrl: 'https://bridge.tonapi.io/bridge'
         }
         
-        const universalLink = this.wallet.connect(walletConnectionSource);
+        const universalLink = this.connector.connect(walletConnectionSource);
         this.callback({text: universalLink})
-        const unsubscribe = this.wallet.onStatusChange(
+        const unsubscribe = this.connector.onStatusChange(
             walletInfo => {
-                this.callback({text: "Ignat"})
-
-                this.storage.writeToCache("wallet_tmp", walletInfo)
+                this.storage.writeToCache<Wallet>("wallet", walletInfo)
+                elizaLogger.info(this.message.userId);
+                unsubscribe()
             } 
         );
-        if (this.wallet.connected) {
-            elizaLogger.log("WALLET CONNECTED");
+        if (this.connector.connected) {
+            elizaLogger.info("WALLET CONNECTED");
         }
 
-        // this.storage.writeToCache<TonConnect>("wallet", this.wallet);
-
-        const walletList = await this.wallet.getWallets();
-
-        let sss = ""
-
-        for (let i = 0; i < walletList.length; i++) {
-            // console.log(numbers[i]);
-            sss += " "
-            sss += walletList[i].name
-        }
-
-        this.callback({
-            text: sss
-        })
-        // Listen for status changes
-        // this.wallet.onStatusChange((wallet) => {
-        //     if (!wallet) {
-        //         return;
-        //     }
-
-        //     const tonProof = wallet.connectItems?.tonProof;
-        //     if (tonProof) {
-        //         if ("proof" in tonProof) {
-        //             // send proof to your backend
-        //             // e.g. myBackendCheckProof(tonProof.proof, wallet.account);
-        //             return;
-        //         }
-
-        //         console.error(tonProof.error);
-        //     }
-        // });
-
-        return this.wallet;
+        return this.connector;
     }
 
     async disconnect(): Promise<boolean> {
-        if (!this.wallet) return false;
+        if (!this.connector) return false;
         try {
-            await this.wallet.disconnect();
-            this.state.connected = false;
-            this.wallet = undefined;
+            await this.connector.disconnect();
+            this.connector = undefined;
             return true;
         } catch (error) {
             console.error("Error disconnecting from TonConnect:", error);
@@ -199,11 +146,11 @@ export class TonConnectWalletProvider {
         }
     }
 
-    async reconnect(): Promise<TonConnect | null> {
-        if (this.state.connected && this.wallet) return this.wallet;
+    // async reconnect(): Promise<TonConnect | null> {
+    //     if (this.connector.connected && this.connector) return this.connector;
 
-        return this.connect();
-    }
+    //     return this.connect();
+    // }
 }
 
 // export const nativeWalletProvider: Provider = {
@@ -222,7 +169,7 @@ export class TonConnectWalletProvider {
 //             return "";
 //         } catch (error) {
 //             // console.error(
-//             //     `Error in ${PROVIDER_CONFIG.CHAIN_NAME_IN_DEXSCREENER.toUpperCase()} wallet provider:`,
+//             //     `Error in ${PROVIDER_CONFIG.CHAIN_NAME_IN_DEXSCREENER.toUpperCase()} connector provider:`,
 //             //     error,
 //             // );
 //             return null;

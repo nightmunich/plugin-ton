@@ -45,10 +45,6 @@ Given the recent messages, extract the following information about the requested
 
 Respond with a JSON markdown block containing only the extracted values.`;
 
-interface ActionOptions {
-    [key: string]: unknown;
-}
-
 export class TransferAction {
     private tonConnectProvider: TonConnectWalletProvider;
 
@@ -56,17 +52,16 @@ export class TransferAction {
         this.tonConnectProvider = tonConnectProvider;
     }
 
-    async transfer(params: TransferContent): Promise<string> {
+    public async transfer(params: TransferContent): Promise<string> {
         elizaLogger.log(
             `Transferring: ${params.amount} tokens to (${params.recipient})`,
         );
-        // { recipient: 'xx', amount: '0\\.3'}
 
         const connector = await this.tonConnectProvider.connect();
 
-        // if (!connector.connected) {
-        //     elizaLogger.error('Please connect wallet to send the transaction!');
-        // }
+        if (!connector.connected) {
+            elizaLogger.error('Please connect wallet to send the transaction!');
+        }
         
         const transaction = {
             validUntil: Math.floor(Date.now() / 1000) + 60, // 60 sec
@@ -103,21 +98,18 @@ const buildTransferDetails = async (
     message: Memory,
     state: State,
 ): Promise<TransferContent> => {
-    // const walletInfo = await nativeWalletProvider.get(runtime, message, state);
-    // state.walletInfo = walletInfo;
 
     // Initialize or update state
-    let currentState = state;
-    if (!currentState) {
-        currentState = (await runtime.composeState(message)) as State;
+    if (!state) {
+        state = (await runtime.composeState(message)) as State;
     } else {
-        currentState = await runtime.updateRecentMessageState(currentState);
+        state = await runtime.updateRecentMessageState(state);
     }
 
     // Define the schema for the expected output
     const transferSchema = z.object({
         recipient: z.string(),
-        amount: z.union([z.string(), z.number()]),
+        amount: z.string(),
     });
 
     // Compose transfer context
@@ -146,13 +138,15 @@ const buildTransferDetails = async (
 export default {
     name: "SEND_TON_TOKEN_TON_CONNECT",
     similes: ["SEND_TON_TON_CONNECT", "SEND_TON_TOKENS_TON_CONNECT"],
-    description:
-        "Call this action to send TON tokens to another wallet address. Supports sending any amount of TON to any valid TON wallet address. Transaction will be signed and broadcast to the TON blockchain.",
+    description: "Call this action to send TON tokens to another wallet address. Supports sending any amount of TON to any valid TON wallet address. Transaction will be signed and broadcast to the TON blockchain.",
+    validate: async (_runtime: IAgentRuntime) => {
+        return true;
+    },
     handler: async (
         runtime: IAgentRuntime,
         message: Memory,
         state: State,
-        _options: ActionOptions,
+        _options: { [key: string]: unknown },
         callback?: HandlerCallback,
     ) => {
         elizaLogger.log("Starting SEND_TOKEN_TON_CONNECT handler...");
@@ -182,7 +176,7 @@ export default {
                 runtime,
                 state,
                 callback,
-                runtime.getSetting("TON_CONNECT_MANIFEST_URL") ?? null,
+                message
             );
             // const provider = tonConnectProvider.connect();
 
@@ -215,25 +209,20 @@ export default {
         }
     },
     template: transferTemplate,
-    // eslint-disable-next-line
-    validate: async (_runtime: IAgentRuntime) => {
-        //console.log("Validating TON transfer from user:", message.userId);
-        return true;
-    },
     examples: [
         [
             {
                 user: "{{user1}}",
                 content: {
                     text: "Send 1 TON tokens to EQCGScrZe1xbyWqWDvdI6mzP-GAcAWFv6ZXuaJOuSqemxku4",
-                    action: "SEND_TON_TOKEN",
+                    action: "SEND_TON_TOKEN_TON_CONNECT",
                 },
             },
             {
                 user: "{{user2}}",
                 content: {
                     text: "I'll send 1 TON tokens now...",
-                    action: "SEND_TON_TOKEN",
+                    action: "SEND_TON_TOKEN_TON_CONNECT",
                 },
             },
             {
@@ -248,14 +237,14 @@ export default {
                 user: "{{user1}}",
                 content: {
                     text: "Transfer 0.5 TON to EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqB2N",
-                    action: "SEND_TON_TOKEN",
+                    action: "SEND_TON_TOKEN_TON_CONNECT",
                 },
             },
             {
                 user: "{{user2}}",
                 content: {
                     text: "Processing transfer of 0.5 TON...",
-                    action: "SEND_TON_TOKEN",
+                    action: "SEND_TON_TOKEN_TON_CONNECT",
                 },
             },
             {
@@ -270,14 +259,14 @@ export default {
                 user: "{{user1}}",
                 content: {
                     text: "Please move 2.5 TON to EQByzSQE5Mf_UBf5YYVF_fRhP_oZwM_h7mGAymWBjxkY5yVm",
-                    action: "SEND_TON_TOKEN",
+                    action: "SEND_TON_TOKEN_TON_CONNECT",
                 },
             },
             {
                 user: "{{user2}}",
                 content: {
                     text: "Initiating transfer of 2.5 TON...",
-                    action: "SEND_TON_TOKEN",
+                    action: "SEND_TON_TOKEN_TON_CONNECT",
                 },
             },
             {
