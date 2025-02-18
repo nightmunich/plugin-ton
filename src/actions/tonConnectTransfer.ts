@@ -92,6 +92,7 @@ export class TransferAction {
             //     alert('Unknown error happened', e);
             // }
             elizaLogger.error('Transaction failed.')
+            elizaLogger.error(e);
             return "false";
         }
     }
@@ -179,6 +180,7 @@ export default {
             // const walletProvider = await initWalletProvider(runtime);
             const tonConnectProvider = new TonConnectWalletProvider(
                 runtime,
+                state,
                 callback,
                 runtime.getSetting("TON_CONNECT_MANIFEST_URL") ?? null,
             );

@@ -16,6 +16,7 @@ import {
     isWalletInfoRemote,
     UserRejectsError,
     WalletInfo,
+    Wallet,
     SendTransactionRequest,
     IStorage
 } from "@tonconnect/sdk";
@@ -26,7 +27,7 @@ import NodeCache from "node-cache";
 class Storage implements IStorage{
     private cache: NodeCache
     constructor(
-        private cacheManager: ICacheManager,
+        public cacheManager: ICacheManager,
         private cacheKey,
         ttl?: number,
     ) {
@@ -83,10 +84,12 @@ export class TonConnectWalletProvider {
     private state: { connected: boolean }; // Properly initialized
     public callback: HandlerCallback
     private storage: Storage
+    private state_: State
 
-    constructor(runtime: IAgentRuntime, callback: HandlerCallback,manifestUrl: string) {
+    constructor(runtime: IAgentRuntime, state: State, callback: HandlerCallback, manifestUrl: string) {
         // super(cacheManager, "ton/data");
         this.runtime = runtime;
+        this.state_ = state;
         this.callback = callback
         this.storage = new Storage(runtime.cacheManager, "ton/data")
         if (!manifestUrl || manifestUrl.trim() === "") {
@@ -102,12 +105,30 @@ export class TonConnectWalletProvider {
             throw new Error("Manifest URL is required for TonConnect.");
         }
 
-        const cached_wallet = await this.storage.readFromCache<TonConnect>("wallet");
+        // const cached_wallet = await this.storage.readFromCache<Wallet>("wallet");
+        // if (cached_wallet != null) {
+        //     this.wallet = cached_wallet;
+        //     new TonConnect({
+        //         wa
+        //     })
+        // } else {
+        //     this.wallet = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage});
+        //     this.wallet.s
+        // }
+        // await this.storage.readFromCache
+        const cached_wallet = await this.storage.readFromCache<Wallet>("wallet_tmp")
+        
         if (cached_wallet != null) {
-            this.wallet = cached_wallet;
-        } else {
-            this.wallet = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage});
+            // elizaLogger.info()
+            elizaLogger.info(cached_wallet.provider);
+
+            this.wallet = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage}); 
+            await this.wallet.restoreConnection();
+            return this.wallet
         }
+        this.wallet = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage}); 
+        // this.wallet.restoreConnection();
+
 
         this.state.connected = true;
         // super.setCachedData("wallet",this.wallet)
@@ -122,14 +143,14 @@ export class TonConnectWalletProvider {
             walletInfo => {
                 this.callback({text: "Ignat"})
 
-                this.storage.writeToCache("wallet", walletInfo)
+                this.storage.writeToCache("wallet_tmp", walletInfo)
             } 
         );
         if (this.wallet.connected) {
             elizaLogger.log("WALLET CONNECTED");
         }
 
-        this.storage.writeToCache<TonConnect>("wallet", this.wallet);
+        // this.storage.writeToCache<TonConnect>("wallet", this.wallet);
 
         const walletList = await this.wallet.getWallets();
 
