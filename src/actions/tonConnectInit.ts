@@ -74,7 +74,7 @@ export default {
             message,
         );
 
-        const connector = await tonConnectProvider.connect();
+        const connector = await tonConnectProvider.connect(undefined, undefined);
 
         elizaLogger.log("Connected to a TON Wallet via TON Connect.")
         if (callback) {
