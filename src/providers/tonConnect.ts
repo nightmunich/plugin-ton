@@ -154,6 +154,9 @@ export class TonConnectWalletProvider {
         }
     }
 
+    async getSupportedWallets():Promise<WalletInfo[]>{
+        return this.wallet.getWallets()
+    }
     // async reconnect(): Promise<TonConnect | null> {
     //     if (this.connector.connected && this.connector) return this.connector;
 
