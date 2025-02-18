@@ -68,6 +68,7 @@ export class SwitchWalletAction{
         // if(!this.tonConnectWalletProvider.disconnect())
         //     throw new Error(`Error disconnecting`);
         // this.tonConnectWalletProvider = new TonConnectWalletProvider(this.runtime)
+        await this.tonConnectWalletProvider.disconnect()
         return this.tonConnectWalletProvider.connect(universalLink, bridgeUrl)
     }
 
