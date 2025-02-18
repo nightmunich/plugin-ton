@@ -33,12 +33,12 @@ import { TonConnectWalletProvider } from "../providers/tonConnect";
 export default {
     name: "INIT_TON_CONNECT",
     similes: ["START_TON_CONNECT", "USE_TON_CONNECT", "TON_CONNECT", "CONNECT_TON_WALLET"],
+    description: "Initialize TON Connect to connect to a TON wallet.",
     validate: async (runtime: IAgentRuntime, message: Memory) => {
         // Always return true for token transfers, letting the handler deal with specifics
         elizaLogger.log("Validating token transfer from user:", message.userId);
         return true;
     },
-    description: "Initialize TON Connect to connect to a TON wallet.",
     handler: async (
         runtime: IAgentRuntime,
         message: Memory,
@@ -71,7 +71,7 @@ export default {
             runtime,
             state,
             callback,
-            runtime.getSetting("TON_CONNECT_MANIFEST_URL") ?? null,
+            message,
         );
 
         const connector = await tonConnectProvider.connect();
