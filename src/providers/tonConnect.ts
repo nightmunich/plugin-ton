@@ -67,7 +67,7 @@ class Storage implements IStorage{
         await this.writeToCache(key, value);
     }
     public async removeItem(key: string): Promise<void>{
-
+        this.cache.del(key)
     }
 }
 
@@ -97,7 +97,11 @@ export class TonConnectWalletProvider {
         // super.setCachedData("connector",undefined)
     }
 
-    async connect(): Promise<TonConnect> {
+    async isConnected():Promise<boolean>{
+        return this.connector.connected
+    }
+
+    async connect(universalLink: string, bridgeUrl: string): Promise<TonConnect> {
         if (!this.manifestUrl) {
             throw new Error("Manifest URL is required for TonConnect.");
         }
@@ -108,21 +112,23 @@ export class TonConnectWalletProvider {
         
         if (cached_wallet) {
             await this.connector.restoreConnection();
-            elizaLogger.info("The wallet was cached, restored connection!");
+            elizaLogger.info("The connector was cached, restored connection!");
             return this.connector
         }
 
 
         const walletConnectionSource = {
-            universalLink: 'https://app.tonkeeper.com/ton-connect',
-            bridgeUrl: 'https://bridge.tonapi.io/bridge'
+            // universalLink: 'https://app.tonkeeper.com/ton-connect',
+            // bridgeUrl: 'https://bridge.tonapi.io/bridge'
+            universalLink: universalLink,
+            bridgeUrl: bridgeUrl
         }
         
-        const universalLink = this.connector.connect(walletConnectionSource);
-        this.callback({text: universalLink})
+        const connectLink = this.connector.connect(walletConnectionSource);
+        this.callback({text: connectLink})
         const unsubscribe = this.connector.onStatusChange(
             walletInfo => {
-                this.storage.writeToCache<Wallet>("wallet", walletInfo)
+                this.storage.writeToCache<Wallet>("connector", walletInfo)
                 elizaLogger.info(this.message.userId);
                 unsubscribe()
             } 
@@ -138,7 +144,9 @@ export class TonConnectWalletProvider {
         if (!this.connector) return false;
         try {
             await this.connector.disconnect();
+            this.state.connected = false;
             this.connector = undefined;
+            this.storage.removeItem("wallet")
             return true;
         } catch (error) {
             console.error("Error disconnecting from TonConnect:", error);
@@ -146,6 +154,9 @@ export class TonConnectWalletProvider {
         }
     }
 
+    async getSupportedWallets():Promise<WalletInfo[]>{
+        return this.wallet.getWallets()
+    }
     // async reconnect(): Promise<TonConnect | null> {
     //     if (this.connector.connected && this.connector) return this.connector;
 
