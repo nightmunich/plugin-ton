@@ -137,7 +137,7 @@ export class TonConnectWalletProvider {
     async disconnect(): Promise<boolean> {
         if (!this.connector) return false;
         try {
-            // await this.connector.disconnect();
+            await this.connector.disconnect();
 
             // this.connector = undefined;
             this.storage.removeItem("connector_tmp")
