@@ -55,6 +55,9 @@ The walletName is empty string "", if the user did not specify any particular wa
 
 Respond with a JSON markdown block containing only the extracted values.`;
 
+const DEFAULT_BRIDGE_URl = 'https://bridge.tonapi.io/bridge';
+const DEFAULT_UNIVERSAL_LINK = 'https://app.tonkeeper.com/ton-connect'
+
 interface ActionOptions {
     [key: string]: unknown;
 }
@@ -72,7 +75,7 @@ export class InitWalletAction{
     }
 
     async checkSupportedWallet(walletName: string): Promise<{ universalLink?: string; bridgeUrl?: string } | null> {
-        const connector = await this.tonConnectWalletProvider.connect(undefined, undefined);
+        const connector = await this.tonConnectWalletProvider.setConnector();
         const supportedWallets = await this.tonConnectWalletProvider.getSupportedWallets();
         elizaLogger.info(supportedWallets)
 
@@ -170,9 +173,9 @@ export default {
             message,
         );
         let connector;
-        
+        tonConnectProvider.disconnect()
         if(walletDetails.walletName === undefined){
-            connector = await tonConnectProvider.connect(undefined, undefined);
+            connector = await tonConnectProvider.connect(DEFAULT_UNIVERSAL_LINK, DEFAULT_BRIDGE_URl);
             elizaLogger.info("FRF");
         }
         else{
