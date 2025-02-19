@@ -8,9 +8,6 @@ import {
     type HandlerCallback
 } from "@elizaos/core";
 
-import * as path from "node:path";
-import NodeCache from "node-cache";
-
 import {
     TonConnect,
     Wallet,
@@ -18,16 +15,15 @@ import {
     IStorage
 } from "@tonconnect/sdk";
 
+import * as path from "node:path";
 
 class Storage implements IStorage{
-    private cache: NodeCache
+    // private cache: NodeCache
     constructor(
         public cacheManager: ICacheManager,
         private cacheKey,
-        ttl?: number,
-    ) {
-        this.cache = new NodeCache({ stdTTL: ttl || 300 });
-    }
+        // ttl?: number,
+    ) {}
 
 
     public async readFromCache<T>(key: string): Promise<T | null> {
@@ -44,33 +40,17 @@ class Storage implements IStorage{
     }
 
     public async getItem(key: string): Promise<string | null> {
-        // Check in-memory cache first
-        const cachedData = this.cache.get<string>(path.join(this.cacheKey, key));
-        if (cachedData) {
-            return cachedData;
-        }
-
-        // Check file-based cache
-        const fileCachedData = await this.readFromCache<string>(key);
-        if (fileCachedData) {
-            // Populate in-memory cache
-            this.cache.set(path.join(this.cacheKey, key), fileCachedData);
-            return fileCachedData;
-        }
-
-        return null;
+        // Read a string value from cache
+        const cachedData = await this.readFromCache<string>(key);
+        return cachedData;
     }
 
     public async setItem(key: string, value: string): Promise<void> {
-        // Set in-memory cache
-        this.cache.set(path.join(this.cacheKey, key), value);
-
-        // Write to file-based cache
-        await this.writeToCache(key, value);
+        // Write a string value to cache
+        await this.writeToCache<string>(key, value);
     }
-    public async removeItem(key: string): Promise<void>{
-        this.cache.del(key)
 
+    public async removeItem(key: string): Promise<void>{
         await this.cacheManager.delete(path.join(this.cacheKey, key));
     }
 }
@@ -79,18 +59,18 @@ export class TonConnectWalletProvider {
     private manifestUrl: string;
     private readonly runtime: IAgentRuntime;
     private connector?: TonConnect;
-    private state: { connected: boolean }; // Properly initialized
+    // private state: { connected: boolean }; // Properly initialized
     public callback: HandlerCallback
     private storage: Storage
-    private state_: State
+    private state: State
     private message: Memory
 
     constructor(runtime: IAgentRuntime, state: State, callback: HandlerCallback, message: Memory) {
         // super(cacheManager, "ton/data");
         this.runtime = runtime;
-        this.state_ = state;
+        this.state = state;
         this.callback = callback;
-        this.storage = new Storage(runtime.cacheManager, `ton/data/${message.userId}`);
+        this.storage = new Storage(runtime.cacheManager, `plugin-ton/users/${message.userId}`);
         this.manifestUrl = runtime.getSetting("TON_CONNECT_MANIFEST_URL") ?? null;
         if (!this.manifestUrl || this.manifestUrl.trim() === "") {
             throw new Error("Manifest URL cannot be empty.");
@@ -141,11 +121,12 @@ export class TonConnectWalletProvider {
         this.callback({text: connectLink})
         const unsubscribe = this.connector.onStatusChange(
             walletInfo => {
-                this.storage.writeToCache<Wallet>("connector_tmp", walletInfo)
-                elizaLogger.info(this.message.userId);
-                unsubscribe()
+                this.storage.writeToCache<Wallet>("connector_tmp", walletInfo);
+                elizaLogger.info(`Cached TON connect session for the user: ${this.message.userId}`);
+                unsubscribe();
             } 
         );
+        
         if (this.connector.connected) {
             elizaLogger.info("WALLET CONNECTED");
         }
@@ -170,11 +151,7 @@ export class TonConnectWalletProvider {
     async getSupportedWallets():Promise<WalletInfo[]>{
         return this.connector.getWallets()
     }
-    // async reconnect(): Promise<TonConnect | null> {
-    //     if (this.connector.connected && this.connector) return this.connector;
 
-    //     return this.connect();
-    // }
 }
 
 // export const nativeWalletProvider: Provider = {

@@ -9,6 +9,11 @@ import {
     type Memory,
     type State,
 } from "@elizaos/core";
+
+import {
+    UserRejectsError
+} from "@tonconnect/sdk"
+
 import { z } from "zod";
 
 export interface TransferContent extends Content {
@@ -81,7 +86,7 @@ export class TransferAction {
             elizaLogger.log('Transaction was sent successfully.');
             return "true";
         } catch (e) {
-            // if (e instanceof UserRejectedError) {
+            // if (e instanceof UserRejectsError) {
             //     alert('You rejected the transaction. Please confirm it to send to the blockchain');
             // } else {
             //     alert('Unknown error happened', e);
@@ -171,14 +176,12 @@ export default {
 
         try {
             // TODO check token balance before transfer
-            // const walletProvider = await initWalletProvider(runtime);
             const tonConnectProvider = new TonConnectWalletProvider(
                 runtime,
                 state,
                 callback,
                 message
             );
-            // const provider = tonConnectProvider.connect();
 
             const action = new TransferAction(tonConnectProvider);
             const hash = await action.transfer(transferDetails);
