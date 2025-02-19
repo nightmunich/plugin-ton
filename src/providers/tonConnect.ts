@@ -109,6 +109,8 @@ export class TonConnectWalletProvider {
         const cached_wallet = await this.storage.readFromCache<Wallet>("connector_tmp");
         this.connector = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage}); 
         
+        elizaLogger.info(this.connector.getWallets);
+
         if (cached_wallet) {
             await this.connector.restoreConnection();
             elizaLogger.info("The connector was cached, restored connection!");
