@@ -135,12 +135,22 @@ export class TonConnectWalletProvider {
     }
 
     async disconnect(): Promise<boolean> {
-        if (!this.connector) return false;
+        // if (!this.connector) return false;
+        const cached_wallet = await this.storage.readFromCache<Wallet>("connector_tmp");
+        if (!cached_wallet) return false;
+
         try {
+            this.connector = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage });
+            await this.connector.restoreConnection();
             await this.connector.disconnect();
 
             // this.connector = undefined;
             this.storage.removeItem("connector_tmp")
+
+            const cached_wallet = await this.storage.readFromCache<Wallet>("connector_tmp");
+
+            elizaLogger.info(cached_wallet == null)
+
             return true;
         } catch (error) {
             console.error("Error disconnecting from TonConnect:", error);
