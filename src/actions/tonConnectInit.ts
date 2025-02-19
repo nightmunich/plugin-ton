@@ -37,23 +37,27 @@ import TonConnect from "@tonconnect/sdk";
 
 // Given the recent messages, extract the name of the desired wallet the user wants to connect to.
 
-const initWalletTemplate = `Respond with a JSON markdown block containing only the extracted values. Use null for any values that cannot be determined.
+const initWalletTemplate = `Respond with a JSON markdown block containing only the extracted values.
 
 Example response:
 \`\`\`json
 {
-    "walletName": string
+    "walletName": "<wallet type name from the LAST message>"
 }
 \`\`\`
 
-{{recentMessages}}
+Given ONLY the LAST message of the user, extract the name of the desired wallet the user wants to connect to.
 
-Given the last message, extract the name of the desired wallet the user wants to connect to.
-
-There are such wallets out there: ["tonkeeper", "tonhub", "wallet", ""]. The walletName should always be one of these.
+There are such wallets out there: ["", "tonkeeper", "tonhub", "wallet"]. The walletName should always be one of these.
 The walletName is empty string "", if the user did not specify any particular wallet out of the above names. 
+Prefer the empty string if the wallet name is ambiguous. 
+Only extract the wallet name based on the LAST user's message.
 
-Respond with a JSON markdown block containing only the extracted values.`;
+Respond with a JSON markdown block containing only the extracted values.
+
+Last message:
+{{lastMessage}}
+`;
 
 interface ActionOptions {
     [key: string]: unknown;
@@ -100,28 +104,34 @@ const buildWalletDetails= async (
     message: Memory,
     state: State,
 ): Promise<WalletHandler> => {
-    let currentState = state;
-    if (!currentState) {
-        currentState = (await runtime.composeState(message)) as State;
-    } else {
-        currentState = await runtime.updateRecentMessageState(currentState);
-    }
+    // let currentState = state;
+    // if (!currentState) {
+    //     currentState = (await runtime.composeState(message)) as State;
+    // } else {
+    //     currentState = await runtime.updateRecentMessageState(currentState);
+    // }
 
     const walletSchema = z.object({
         walletName: z.string(),
     });
 
+    // const lastMessage = message.content.text;
+
     const walletContext = composeContext({
-        state,
-        template: initWalletTemplate,
+        state: state,
+        template: initWalletTemplate.replace('{{lastMessage}}',
+            message.content.text
+        ),
     });
+
+    elizaLogger.info(walletContext);
 
     // Generate transfer content with the schema
     const content = await generateObject({
         runtime,
         context: walletContext,
         schema: walletSchema,
-        modelClass: ModelClass.SMALL,
+        modelClass: ModelClass.LARGE,
     });
 
     let walletContent: WalletHandler = content.object as WalletHandler;
@@ -178,6 +188,7 @@ export default {
         else{
             const action = new InitWalletAction(tonConnectProvider);
             const { universalLink, bridgeUrl } = await action.checkSupportedWallet(walletDetails.walletName) || {};
+            await tonConnectProvider.disconnect();
             connector = await tonConnectProvider.connect(universalLink, bridgeUrl);
             elizaLogger.info(walletDetails.walletName)
         }
