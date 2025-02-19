@@ -11,14 +11,14 @@ import {
 } from "@elizaos/core";
 
 import {
-    UserRejectsError
+    UserRejectsError,
+    CHAIN
 } from "@tonconnect/sdk"
 
 import { z } from "zod";
 
 export interface TransferContent extends Content {
     recipient: string;
-    // amount: string | number;
     amount: string;
 }
 import { TonConnectWalletProvider } from "../providers/tonConnect.ts";
@@ -27,8 +27,7 @@ function isTransferContent(content: Content): content is TransferContent {
     elizaLogger.log("Content for transfer", content);
     return (
         typeof content.recipient === "string" &&
-        (typeof content.amount === "string" ||
-            typeof content.amount === "number")
+        typeof content.amount === "string"
     );
 }
 
@@ -57,43 +56,49 @@ export class TransferAction {
         this.tonConnectProvider = tonConnectProvider;
     }
 
+    // private async tonToNanoTon(amount: string): Promise<string> {
+        
+    //     return string(int(amount) * 10 ** 9)
+    // }
+
     public async transfer(params: TransferContent): Promise<string> {
-        elizaLogger.log(
+        elizaLogger.info(
             `Transferring: ${params.amount} tokens to (${params.recipient})`,
         );
 
         const connector = await this.tonConnectProvider.connect(undefined, undefined);
 
         if (!connector.connected) {
-            elizaLogger.error('Please connect wallet to send the transaction!');
+            elizaLogger.error("Wallet is not connected to send the transaction!");
         }
         
         const transaction = {
             validUntil: Math.floor(Date.now() / 1000) + 60, // 60 sec
             messages: [
                 {
+                    network: CHAIN.MAINNET,
                     address: params.recipient,
                     amount: params.amount,
+                    payload: "Transaction done by elizaOS plugin-ton"
                 }
             ]
         }
         
         try {
             const result = await connector.sendTransaction(transaction);
-            
-            // you can use signed boc to find the transaction 
-            // const someTxData = await myAppExplorerService.getTransaction(result.boc);
-            elizaLogger.log('Transaction was sent successfully.');
-            return "true";
+            // (Optional TODO) In future one can use signed boc (result.boc) to find the transaction
+
+            elizaLogger.info("Transaction was sent successfully.");
+            return result.boc;
+
         } catch (e) {
-            // if (e instanceof UserRejectsError) {
-            //     alert('You rejected the transaction. Please confirm it to send to the blockchain');
-            // } else {
-            //     alert('Unknown error happened', e);
-            // }
-            elizaLogger.error('Transaction failed.')
-            elizaLogger.error(e);
-            return "false";
+            if (e instanceof UserRejectsError) {
+                elizaLogger.error("The user rejected the transaction.");
+            } else {
+                elizaLogger.error("Transaction failed.")
+                elizaLogger.error(e.message);
+            }
+            return null;
         }
     }
 }
@@ -164,10 +169,10 @@ export default {
 
         // Validate transfer content
         if (!isTransferContent(transferDetails)) {
-            elizaLogger.error("Invalid content for TRANSFER_TOKEN action.");
+            elizaLogger.error("Invalid content for SEND_TON_TOKEN_TON_CONNECT action.");
             if (callback) {
                 callback({
-                    text: "Unable to process transfer request. Invalid content provided.",
+                    text: "Unable to process transfer request. Invalid content provided. Please provide the recipient address and the amount in grams.",
                     content: { error: "Invalid transfer content" },
                 });
             }
