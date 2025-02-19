@@ -33,20 +33,25 @@ import TonConnect from "@tonconnect/sdk";
 // - Amount of SOL to transfer
 // `;
 
+// {{recentMessages}}
+
+// Given the recent messages, extract the name of the desired wallet the user wants to connect to.
+
 const initWalletTemplate = `Respond with a JSON markdown block containing only the extracted values. Use null for any values that cannot be determined.
 
 Example response:
 \`\`\`json
 {
-    "walletName": "tonhub"
+    "walletName": string
 }
 \`\`\`
 
 {{recentMessages}}
 
-Given the recent messages, extract the name of the desired wallet the user wants to connect to.
+Given the last message, extract the name of the desired wallet the user wants to connect to.
 
-There are such wallets out there: ["tonkeeper", "tonhub", "wallet"]. The walletName should always be one of these.
+There are such wallets out there: ["tonkeeper", "tonhub", "wallet", ""]. The walletName should always be one of these.
+The walletName is empty string "", if the user did not specify any particular wallet out of the above names. 
 
 Respond with a JSON markdown block containing only the extracted values.`;
 
@@ -70,14 +75,23 @@ export class InitWalletAction{
         const connector = await this.tonConnectWalletProvider.connect(undefined, undefined);
         const supportedWallets = await this.tonConnectWalletProvider.getSupportedWallets();
         elizaLogger.info(supportedWallets)
+
+        // if (walletName === "") return {universalLink: undefined, bridgeUrl: undefined};
+
         const wallet = supportedWallets.find(w => w.name.toLowerCase() === walletName.toLowerCase());
     
         if (!wallet) return null; // If no wallet is found, return null
     
+        if ("universalLink" in wallet && "bridgeUrl" in wallet) {
+            return {
+                universalLink: wallet.universalLink ?? undefined,  // Handle optional property
+                bridgeUrl: wallet.bridgeUrl ?? undefined           // Handle optional property
+            };    
+        }
         return {
-            universalLink: wallet.universalLink ?? undefined,  // Handle optional property
-            bridgeUrl: wallet.bridgeUrl ?? undefined           // Handle optional property
-        };
+            universalLink: undefined,
+            bridgeUrl: undefined
+        }
     }
 }
 
@@ -92,29 +106,31 @@ const buildWalletDetails= async (
     } else {
         currentState = await runtime.updateRecentMessageState(currentState);
     }
+
     const walletSchema = z.object({
         walletName: z.string(),
     });
+
     const walletContext = composeContext({
-            state,
-            template: initWalletTemplate,
-        });
-    
-        // Generate transfer content with the schema
-        const content = await generateObject({
-            runtime,
-            context: walletContext,
-            schema: walletSchema,
-            modelClass: ModelClass.SMALL,
-        });
-    
-        let walletContent: WalletHandler = content.object as WalletHandler;
-    
-        if (walletContent === undefined) {
-            walletContent = content as unknown as WalletHandler;
-        }
-    
-        return walletContent;
+        state,
+        template: initWalletTemplate,
+    });
+
+    // Generate transfer content with the schema
+    const content = await generateObject({
+        runtime,
+        context: walletContext,
+        schema: walletSchema,
+        modelClass: ModelClass.SMALL,
+    });
+
+    let walletContent: WalletHandler = content.object as WalletHandler;
+
+    if (walletContent === undefined) {
+        walletContent = content as unknown as WalletHandler;
+    }
+
+    return walletContent;
 }
 
 
@@ -157,11 +173,13 @@ export default {
         
         if(walletDetails.walletName === undefined){
             connector = await tonConnectProvider.connect(undefined, undefined);
+            elizaLogger.info("FRF");
         }
         else{
             const action = new InitWalletAction(tonConnectProvider);
             const { universalLink, bridgeUrl } = await action.checkSupportedWallet(walletDetails.walletName) || {};
             connector = await tonConnectProvider.connect(universalLink, bridgeUrl);
+            elizaLogger.info(walletDetails.walletName)
         }
 
         elizaLogger.log("Connected to a TON Wallet via TON Connect.")

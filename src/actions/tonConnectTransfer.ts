@@ -15,6 +15,8 @@ import {
     CHAIN
 } from "@tonconnect/sdk"
 
+import { toNano } from "@ton/ton";
+
 import { z } from "zod";
 
 export interface TransferContent extends Content {
@@ -56,11 +58,6 @@ export class TransferAction {
         this.tonConnectProvider = tonConnectProvider;
     }
 
-    // private async tonToNanoTon(amount: string): Promise<string> {
-        
-    //     return string(int(amount) * 10 ** 9)
-    // }
-
     public async transfer(params: TransferContent): Promise<string> {
         elizaLogger.info(
             `Transferring: ${params.amount} tokens to (${params.recipient})`,
@@ -78,8 +75,8 @@ export class TransferAction {
                 {
                     network: CHAIN.MAINNET,
                     address: params.recipient,
-                    amount: params.amount,
-                    payload: "Transaction done by elizaOS plugin-ton"
+                    amount: toNano(params.amount).toString(),
+                    payload: "Transaction done through elizaOS plugin-ton."
                 }
             ]
         }
