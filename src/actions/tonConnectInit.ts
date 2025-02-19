@@ -8,10 +8,13 @@ import {
     ModelClass,
     type State,
     type Action,
+    generateObject
 } from "@elizaos/core";
 import { composeContext } from "@elizaos/core";
 import { generateObjectDeprecated } from "@elizaos/core";
 import { TonConnectWalletProvider } from "../providers/tonConnect";
+import { z } from "zod";
+import TonConnect from "@tonconnect/sdk";
 
 // const tonConnectInitTemplate = `Respond with a JSON markdown block containing only the extracted values. Use null for any values that cannot be determined.
 
@@ -29,6 +32,91 @@ import { TonConnectWalletProvider } from "../providers/tonConnect";
 // - Recipient wallet address
 // - Amount of SOL to transfer
 // `;
+
+const initWalletTemplate = `Respond with a JSON markdown block containing only the extracted values. Use null for any values that cannot be determined.
+
+Example response:
+\`\`\`json
+{
+    "walletName": "tonhub"
+}
+\`\`\`
+
+{{recentMessages}}
+
+Given the recent messages, extract the name of the desired wallet the user wants to connect to.
+
+There are such wallets out there: ["tonkeeper", "tonhub", "wallet"]. The walletName should always be one of these.
+
+Respond with a JSON markdown block containing only the extracted values.`;
+
+interface ActionOptions {
+    [key: string]: unknown;
+}
+
+export interface WalletHandler extends Content {
+    walletName: string;
+}
+
+export class InitWalletAction{
+    private tonConnectWalletProvider: TonConnectWalletProvider;
+    private readonly runtime: IAgentRuntime;
+
+    constructor(tonConnectProvider: TonConnectWalletProvider) {
+        this.tonConnectWalletProvider = tonConnectProvider;
+    }
+
+    async checkSupportedWallet(walletName: string): Promise<{ universalLink?: string; bridgeUrl?: string } | null> {
+        const connector = await this.tonConnectWalletProvider.connect(undefined, undefined);
+        const supportedWallets = await this.tonConnectWalletProvider.getSupportedWallets();
+        elizaLogger.info(supportedWallets)
+        const wallet = supportedWallets.find(w => w.name.toLowerCase() === walletName.toLowerCase());
+    
+        if (!wallet) return null; // If no wallet is found, return null
+    
+        return {
+            universalLink: wallet.universalLink ?? undefined,  // Handle optional property
+            bridgeUrl: wallet.bridgeUrl ?? undefined           // Handle optional property
+        };
+    }
+}
+
+const buildWalletDetails= async (
+    runtime: IAgentRuntime,
+    message: Memory,
+    state: State,
+): Promise<WalletHandler> => {
+    let currentState = state;
+    if (!currentState) {
+        currentState = (await runtime.composeState(message)) as State;
+    } else {
+        currentState = await runtime.updateRecentMessageState(currentState);
+    }
+    const walletSchema = z.object({
+        walletName: z.string(),
+    });
+    const walletContext = composeContext({
+            state,
+            template: initWalletTemplate,
+        });
+    
+        // Generate transfer content with the schema
+        const content = await generateObject({
+            runtime,
+            context: walletContext,
+            schema: walletSchema,
+            modelClass: ModelClass.SMALL,
+        });
+    
+        let walletContent: WalletHandler = content.object as WalletHandler;
+    
+        if (walletContent === undefined) {
+            walletContent = content as unknown as WalletHandler;
+        }
+    
+        return walletContent;
+}
+
 
 export default {
     name: "INIT_TON_CONNECT",
@@ -54,27 +142,27 @@ export default {
             state = await runtime.updateRecentMessageState(state);
         }
 
-        // Will be done in the provider
-        // const manifestUrl = runtime.getSetting("TON_CONNECT_MANIFEST_URL") ?? null;
-
-        // if (!manifestUrl) {
-        //     elizaLogger.error("No TON_CONNECT_MANIFEST_URL specified.");
-        //     if (callback) {
-        //         callback({
-        //             text: "This app does not support TON Connect.",
-        //             content: { error: "No TON Connect support." },
-        //         });
-        //     }
-        //     return false;
-        // }
+        const walletDetails = await buildWalletDetails(
+            runtime,
+            message,
+            state,
+        );
         const tonConnectProvider = new TonConnectWalletProvider(
             runtime,
             state,
             callback,
             message,
         );
-
-        const connector = await tonConnectProvider.connect(undefined, undefined);
+        let connector;
+        
+        if(walletDetails.walletName === undefined){
+            connector = await tonConnectProvider.connect(undefined, undefined);
+        }
+        else{
+            const action = new InitWalletAction(tonConnectProvider);
+            const { universalLink, bridgeUrl } = await action.checkSupportedWallet(walletDetails.walletName) || {};
+            connector = await tonConnectProvider.connect(universalLink, bridgeUrl);
+        }
 
         elizaLogger.log("Connected to a TON Wallet via TON Connect.")
         if (callback) {

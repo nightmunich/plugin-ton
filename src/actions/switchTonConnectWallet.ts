@@ -69,9 +69,6 @@ export class SwitchWalletAction{
             bridgeUrl: wallet.bridgeUrl ?? undefined           // Handle optional property
         };
     }
-    
-    
-    
 }
 
 const buildSwitchWalletDetails= async (
