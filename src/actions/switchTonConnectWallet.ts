@@ -1,4 +1,4 @@
-import { elizaLogger, settings } from "@elizaos/core";
+import { elizaLogger, settings} from "@elizaos/core";
 import {
     type ActionExample,
     type Content,
@@ -40,17 +40,8 @@ interface ActionOptions {
 
 export interface WalletHandler extends Content {
     walletName: string;
-    // amount: string | number;
-    // bridgeUrl: string;
 }
 
-// function isWalletHandler(content: Content): content is WalletHandler {
-//     elizaLogger.log("Content for transfer", content);
-
-//     return (
-//         typeof content.wallet_name === "string" 
-//     );
-// }
 
 export class SwitchWalletAction{
     private tonConnectWalletProvider: TonConnectWalletProvider;
@@ -61,13 +52,6 @@ export class SwitchWalletAction{
     }
 
     async switchWallet(universalLink:string, bridgeUrl: string):Promise<TonConnect>{
-        // if (!this.tonConnectWalletProvider.isConnected){
-        //     this.tonConnectWalletProvider.disconnect()
-        //     return this.tonConnectWalletProvider.connect(universalLink, bridgeUrl)
-        // }
-        // if(!this.tonConnectWalletProvider.disconnect())
-        //     throw new Error(`Error disconnecting`);
-        // this.tonConnectWalletProvider = new TonConnectWalletProvider(this.runtime)
         await this.tonConnectWalletProvider.disconnect()
         return this.tonConnectWalletProvider.connect(universalLink, bridgeUrl)
     }
@@ -89,52 +73,6 @@ export class SwitchWalletAction{
     
     
 }
-
-
-// const buildTransferDetails = async (
-//     runtime: IAgentRuntime,
-//     message: Memory,
-//     state: State,
-// ): Promise<TransferContent> => {
-//     // const walletInfo = await nativeWalletProvider.get(runtime, message, state);
-//     // state.walletInfo = walletInfo;
-
-//     // Initialize or update state
-//     let currentState = state;
-//     if (!currentState) {
-//         currentState = (await runtime.composeState(message)) as State;
-//     } else {
-//         currentState = await runtime.updateRecentMessageState(currentState);
-//     }
-
-//     // Define the schema for the expected output
-//     const transferSchema = z.object({
-//         recipient: z.string(),
-//         amount: z.union([z.string(), z.number()]),
-//     });
-
-//     // Compose transfer context
-//     const transferContext = composeContext({
-//         state,
-//         template: transferTemplate,
-//     });
-
-//     // Generate transfer content with the schema
-//     const content = await generateObject({
-//         runtime,
-//         context: transferContext,
-//         schema: transferSchema,
-//         modelClass: ModelClass.SMALL,
-//     });
-
-//     let transferContent: TransferContent = content.object as TransferContent;
-
-//     if (transferContent === undefined) {
-//         transferContent = content as unknown as TransferContent;
-//     }
-
-//     return transferContent;
-// };
 
 const buildSwitchWalletDetails= async (
     runtime: IAgentRuntime,
@@ -207,62 +145,7 @@ export default {
                     throw new Error(`Switching failed: desired wallet is not supported`);
                 await action.switchWallet(universalLink, bridgeUrl)
                 callback({text: "nice, wallet has been switched"})
-                // if(!action.checkSupportedWallet(walletDetails.walletName))
-                //     throw new Error(`Switching failed: desired wallet is not supported`);
-
-                // // Validate transfer content
-                // if (!isWalletHandler(walletDetails)) {
-                //     elizaLogger.error("Invalid content for SwitchTonConnectWallet action.");
-                //     if (callback) {
-                //         callback({
-                //             text: "Unable to process Wallet switching",
-                //             content: { error: "Invalid wallet info content" },
-                //         });
-                //     }
-                //     return false;
-                // }
-        
-                // try {
-                //     // TODO check token balance before transfer
-                //     // const walletProvider = await initWalletProvider(runtime);
-                //     const tonConnectProvider = new TonConnectWalletProvider(
-                //         runtime,
-                //         state,
-                //         callback,
-                //         runtime.getSetting("TON_CONNECT_MANIFEST_URL") ?? null,
-                //     );
-                //     // const provider = tonConnectProvider.connect();
-        
-                //     const action = new TransferAction(tonConnectProvider);
-                //     const hash = await action.transfer(transferDetails);
-        
-                //     if (callback) {
-                //         callback({
-                //             // TODO wait for transaction to complete
-                //             text: `Successfully transferred ${transferDetails.amount} TON to ${transferDetails.recipient}, Transaction: ${hash}`,
-                //             content: {
-                //                 success: true,
-                //                 hash: hash,
-                //                 amount: transferDetails.amount,
-                //                 recipient: transferDetails.recipient,
-                //             },
-                //         });
-                //     }
-        
-                //     return true;
-                // } catch (error) {
-                //     elizaLogger.error("Error during token transfer:", error);
-                //     if (callback) {
-                //         callback({
-                //             text: `Error transferring tokens: ${error.message}`,
-                //             content: { error: error.message },
-                //         });
-                //     }
-                //     return false;
-                // }
     },
-    // template: transferTemplate,
-    // eslint-disable-next-line
     validate: async (_runtime: IAgentRuntime) => {
         //console.log("Validating TON transfer from user:", message.userId);
         return true;
@@ -326,27 +209,5 @@ export default {
                 },
             },
         ],
-        // [
-        //     {
-        //         user: "{{user1}}",
-        //         content: {
-        //             text: "Please move 2.5 TON to EQByzSQE5Mf_UBf5YYVF_fRhP_oZwM_h7mGAymWBjxkY5yVm",
-        //             action: "SEND_TON_TOKEN",
-        //         },
-        //     },
-        //     {
-        //         user: "{{user2}}",
-        //         content: {
-        //             text: "Initiating transfer of 2.5 TON...",
-        //             action: "SEND_TON_TOKEN",
-        //         },
-        //     },
-        //     {
-        //         user: "{{user2}}",
-        //         content: {
-        //             text: "Successfully sent 2.5 TON to EQByzSQE5Mf_UBf5YYVF_fRhP_oZwM_h7mGAymWBjxkY5yVm, Transaction: c8ee4a2c1bd070005e6cd31b32270aa461c69b927c3f4c28b293c80786f78b43",
-        //         },
-        //     },
-        // ],
-    ],
+    ] as ActionExample[][],
 };
