@@ -17,6 +17,9 @@ import {
 
 import * as path from "node:path";
 
+const DEFAULT_BRIDGE_URl = 'https://bridge.tonapi.io/bridge';
+const DEFAULT_UNIVERSAL_LINK = 'https://app.tonkeeper.com/ton-connect'
+
 class Storage implements IStorage{
     // private cache: NodeCache
     constructor(
@@ -85,6 +88,16 @@ export class TonConnectWalletProvider {
         return this.connector.connected
     }
 
+    async setConnector(): Promise<TonConnect>{
+        const cached_wallet = await this.storage.readFromCache<Wallet>("connector_tmp");
+        if (cached_wallet) {
+            await this.connector.restoreConnection();
+            elizaLogger.info("The connector was cached, restored connection!");
+            return this.connector
+        }
+        this.connector.connect({universalLink: DEFAULT_UNIVERSAL_LINK, bridgeUrl: DEFAULT_BRIDGE_URl});
+        return this.connector
+    }
 
 
     async connect(universalLink: string, bridgeUrl: string): Promise<TonConnect> {
@@ -105,10 +118,10 @@ export class TonConnectWalletProvider {
         elizaLogger.info(universalLink);
         elizaLogger.info("OPKAKA");
 
-        if (!universalLink && !bridgeUrl) {
-            universalLink = 'https://app.tonkeeper.com/ton-connect';
-            bridgeUrl = 'https://bridge.tonapi.io/bridge';
-        }
+        // if (!universalLink && !bridgeUrl) {
+        //     universalLink = 'https://app.tonkeeper.com/ton-connect';
+        //     bridgeUrl = 'https://bridge.tonapi.io/bridge';
+        // }
 
         const walletConnectionSource = {
             // universalLink: 'https://app.tonkeeper.com/ton-connect',
@@ -135,22 +148,12 @@ export class TonConnectWalletProvider {
     }
 
     async disconnect(): Promise<boolean> {
-        // if (!this.connector) return false;
-        const cached_wallet = await this.storage.readFromCache<Wallet>("connector_tmp");
-        if (!cached_wallet) return false;
-
+        if (!this.connector) return false;
         try {
-            this.connector = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage });
-            await this.connector.restoreConnection();
             await this.connector.disconnect();
 
             // this.connector = undefined;
             this.storage.removeItem("connector_tmp")
-
-            const cached_wallet = await this.storage.readFromCache<Wallet>("connector_tmp");
-
-            elizaLogger.info(cached_wallet == null)
-
             return true;
         } catch (error) {
             console.error("Error disconnecting from TonConnect:", error);
