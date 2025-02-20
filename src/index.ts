@@ -1,10 +1,10 @@
 import type { Plugin } from "@elizaos/core";
 import transferAction from "./actions/transfer.ts";
 import { WalletProvider } from "./providers/wallet.ts";
-import tonConnectInitAction from "./actions/tonConnectInit.ts";
-import tonConnectTransferAction from "./actions/tonConnectTransfer.ts";
-import tonConnectSwitchAction from "./actions/switchTonConnectWallet.ts";
-import tonConnectDisconnectAction from "./actions/disconnectWalletAction.ts"
+import tonConnectInitAction from "./actions/tonConnectInit";
+import tonConnectTransferAction from "./actions/tonConnectTransfer";
+import tonConnectSwitchAction from "./actions/switchTonConnectWallet";
+import tonConnectDisconnectAction from "./actions/tonConnectDisconnect"
 
 import { TonConnectWalletProvider } from "./providers/tonConnect.js";
 // import { TonConnectWalletProvider, nativeWalletProvider } from "./providers/tonConnect.ts";

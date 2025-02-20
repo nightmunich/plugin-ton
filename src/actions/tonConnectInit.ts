@@ -47,7 +47,7 @@ Example response:
 }
 \`\`\`
 
-Given ONLY the LAST message of the user, extract the name of the desired wallet the user wants to connect to.
+Given the last message of the user, extract the name of the desired wallet the user wants to connect to.
 
 {{allWallets}}
 There are such wallets out there: ["", "tonkeeper", "tonhub", "wallet"]. The walletName should always be one of these.
@@ -104,7 +104,7 @@ export class InitWalletAction{
     }
 }
 
-const buildWalletDetails= async (
+const buildWalletDetails = async (
     runtime: IAgentRuntime,
     message: Memory,
     state: State,

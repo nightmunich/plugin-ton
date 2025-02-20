@@ -1,27 +1,22 @@
-import { elizaLogger, settings } from "@elizaos/core";
+import { elizaLogger } from "@elizaos/core";
 import {
     type ActionExample,
-    type Content,
     type HandlerCallback,
     type IAgentRuntime,
     type Memory,
-    ModelClass,
     type State,
     type Action,
-    generateObject,
 } from "@elizaos/core";
-import { composeContext } from "@elizaos/core";
-import { generateObjectDeprecated } from "@elizaos/core";
 import { TonConnectWalletProvider } from "../providers/tonConnect";
-import TonConnect from "@tonconnect/sdk";
-import { z } from "zod";
 
 
 export default {
     name: "DISCONNECT_WALLET",
     similes: ["DISCONNECT_TON_CONNECT_WALLET", "DISCONNECT_TON_WALLET", "DISCONNECT_MY_WALLET"],
-    description:
-        "Call this action to disconnect the current TonConnect Wallet.",
+    description: "Call this action to disconnect the current TonConnect Wallet.",
+    validate: async (_runtime: IAgentRuntime) => {
+        return true;
+    },    
     handler: async (
         runtime: IAgentRuntime,
         message: Memory,
@@ -29,33 +24,34 @@ export default {
         _options: { [key: string]: unknown },
         callback?: HandlerCallback,
     ):Promise<boolean> => {
-        elizaLogger.log("Starting disconnecting wallet.");
+        elizaLogger.info("Starting disconnecting wallet.");
+        
         if (!state) {
             state = (await runtime.composeState(message)) as State;
         } else {
             state = await runtime.updateRecentMessageState(state);
         }
+
         const tonConnectProvider = new TonConnectWalletProvider(
             runtime,
             state,
             callback,
-            message,
+            message
         );
-        const connector = await tonConnectProvider.disconnect();
+
+        const disconnected = await tonConnectProvider.disconnect();
         
-                elizaLogger.log("Succesfully disconnected.")
-                if (callback) {
-                    callback({
-                        text: "Successfully disconnected."
-                    })
-                }
-        
+        if (disconnected) {
+            elizaLogger.info("Succesfully disconnected.")
+            if (callback) {
+                callback({
+                    text: "Successfully disconnected."
+                })
+            }
             return true;
-        
-    },
-    validate: async (_runtime: IAgentRuntime) => {
-        //console.log("Validating TON transfer from user:", message.userId);
-        return true;
+        }
+
+        return false;
     },
     examples: [
         [
@@ -125,5 +121,4 @@ export default {
             },
         ],
     ] as ActionExample[][],
-    
-};
+} as Action;
