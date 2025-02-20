@@ -2,7 +2,6 @@ import {
     elizaLogger,
     IAgentRuntime,
     Memory,
-    Provider,
     ICacheManager,
     State,
     type HandlerCallback
@@ -100,7 +99,7 @@ export class TonConnectWalletProvider {
 
         if (cached_wallet) {
             await this.connector.restoreConnection();
-            elizaLogger.info("[SETCONNECTOR] The connector was cached, restored connection!");
+            elizaLogger.info("The connector was cached, restored connection!");
             return this.connector
         }
         this.connector.connect({
@@ -121,7 +120,7 @@ export class TonConnectWalletProvider {
         
         if (cached_wallet) {
             await this.connector.restoreConnection();
-            elizaLogger.info("[CONNECT] The connector was cached, restored connection!");
+            elizaLogger.info("The connector was cached, restored connection!");
             return this.connector;
         }
 
@@ -131,7 +130,9 @@ export class TonConnectWalletProvider {
         }
         
         const connectLink = this.connector.connect(walletConnectionSource);
-        this.callback({text: connectLink})
+        this.callback({
+            text: connectLink
+        })
         const unsubscribe = this.connector.onStatusChange(
             walletInfo => {
                 this.storage.writeToCache<Wallet>("CONNECTOR", walletInfo);
@@ -152,13 +153,16 @@ export class TonConnectWalletProvider {
         const cached_wallet = await this.storage.readFromCache<Wallet>("CONNECTOR");
         if (!cached_wallet) return false;
         try {
-            this.connector = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage });
+            this.connector = new TonConnect({ 
+                manifestUrl: this.manifestUrl,
+                storage: this.storage 
+            });
             await this.connector.restoreConnection();
             await this.connector.disconnect();
             await this.storage.removeItem("CONNECTOR")            
             return true;
         } catch (error) {
-            console.error("Error disconnecting from TonConnect:", error);
+            elizaLogger.error("Error disconnecting from TonConnect:", error);
             return false;
         }
     }
