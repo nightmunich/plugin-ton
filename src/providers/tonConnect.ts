@@ -17,15 +17,14 @@ import {
 
 import * as path from "node:path";
 
-const DEFAULT_BRIDGE_URl = 'https://bridge.tonapi.io/bridge';
+const DEFAULT_BRIDGE_URL = 'https://bridge.tonapi.io/bridge';
 const DEFAULT_UNIVERSAL_LINK = 'https://app.tonkeeper.com/ton-connect'
 
 class Storage implements IStorage{
-    // private cache: NodeCache
     constructor(
-        public cacheManager: ICacheManager,
-        private cacheKey,
-        // ttl?: number,
+        private cacheManager: ICacheManager,
+        private cacheKey: string,
+        private ttl?: number,
     ) {}
 
 
@@ -38,10 +37,11 @@ class Storage implements IStorage{
 
     public async writeToCache<T>(key: string, data: T): Promise<void> {
         await this.cacheManager.set(path.join(this.cacheKey, key), data, {
-            expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+            expires: this.ttl ?? Date.now() + 15 * 60 * 1000, // 15 minutes
         });
     }
 
+    // Bottom functions are required by TonConnect
     public async getItem(key: string): Promise<string | null> {
         // Read a string value from cache
         const cachedData = await this.readFromCache<string>(key);
@@ -62,14 +62,12 @@ export class TonConnectWalletProvider {
     private manifestUrl: string;
     private readonly runtime: IAgentRuntime;
     private connector?: TonConnect;
-    // private state: { connected: boolean }; // Properly initialized
     public callback: HandlerCallback
     private storage: Storage
     private state: State
     private message: Memory
 
     constructor(runtime: IAgentRuntime, state: State, callback: HandlerCallback, message: Memory) {
-        // super(cacheManager, "ton/data");
         this.runtime = runtime;
         this.state = state;
         this.callback = callback;
@@ -78,73 +76,56 @@ export class TonConnectWalletProvider {
         if (!this.manifestUrl || this.manifestUrl.trim() === "") {
             throw new Error("Manifest URL cannot be empty.");
         }
-
-        // this.state = { connected: false }; // Proper initialization
         this.message = message;
-        // super.setCachedData("connector",undefined)
         this.connector = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage});
     }
 
-    async isConnected():Promise<boolean>{
-        return this.connector.connected
+
+    public async isConnected():Promise<boolean>{
+        return this.connector.connected;
     }
 
-    async setConnector(): Promise<TonConnect>{
+    
+    public async getSupportedWallets():Promise<WalletInfo[]>{
+        return this.connector.getWallets();
+    }
+
+
+    public async setConnector(): Promise<TonConnect>{
         const cached_wallet = await this.storage.readFromCache<Wallet>("connector_tmp");
-        this.connector = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage})
+        this.connector = new TonConnect({ 
+            manifestUrl: this.manifestUrl, 
+            storage: this.storage
+        });
 
         if (cached_wallet) {
             await this.connector.restoreConnection();
             elizaLogger.info("[SETCONNECTOR] The connector was cached, restored connection!");
             return this.connector
         }
-
-        elizaLogger.info(await this.connector.getWallets()[0])
-
-        this.connector.connect({universalLink: DEFAULT_UNIVERSAL_LINK, bridgeUrl: DEFAULT_BRIDGE_URl});
-        
-        elizaLogger.info("puk")
-
-        elizaLogger.info(await this.connector.getWallets()[0])
-
-
-        const supportedWallets = await this.getSupportedWallets();
-        elizaLogger.info(supportedWallets[0])
-
-        elizaLogger.info("2nd puk")
+        this.connector.connect({
+            universalLink: DEFAULT_UNIVERSAL_LINK,
+            bridgeUrl: DEFAULT_BRIDGE_URL
+        });
 
         return this.connector
     }
 
 
-    async connect(universalLink: string, bridgeUrl: string): Promise<TonConnect> {
-        if (!this.manifestUrl) {
-            throw new Error("Manifest URL is required for TonConnect.");
-        }
-
-        elizaLogger.info(this.message.userId);
-        const cached_wallet = await this.storage.readFromCache<Wallet>("connector_tmp");
-        this.connector = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage}); 
+    public async connect(universalLink: string, bridgeUrl: string): Promise<TonConnect> {
+        const cached_wallet = await this.storage.readFromCache<Wallet>("CONNECTOR");
+        this.connector = new TonConnect({
+            manifestUrl: this.manifestUrl, 
+            storage: this.storage
+        }); 
         
-        elizaLogger.info(this.connector.getWallets);
-
         if (cached_wallet) {
             await this.connector.restoreConnection();
             elizaLogger.info("[CONNECT] The connector was cached, restored connection!");
-            return this.connector
+            return this.connector;
         }
 
-        elizaLogger.info(universalLink);
-        elizaLogger.info("OPKAKA");
-
-        // if (!universalLink && !bridgeUrl) {
-        //     universalLink = 'https://app.tonkeeper.com/ton-connect';
-        //     bridgeUrl = 'https://bridge.tonapi.io/bridge';
-        // }
-
         const walletConnectionSource = {
-            // universalLink: 'https://app.tonkeeper.com/ton-connect',
-            // bridgeUrl: 'https://bridge.tonapi.io/bridge'
             universalLink: universalLink,
             bridgeUrl: bridgeUrl
         }
@@ -153,33 +134,28 @@ export class TonConnectWalletProvider {
         this.callback({text: connectLink})
         const unsubscribe = this.connector.onStatusChange(
             walletInfo => {
-                this.storage.writeToCache<Wallet>("connector_tmp", walletInfo);
+                this.storage.writeToCache<Wallet>("CONNECTOR", walletInfo);
                 elizaLogger.info(`Cached TON connect session for the user: ${this.message.userId}`);
                 unsubscribe();
             } 
         );
         
         if (this.connector.connected) {
-            elizaLogger.info("WALLET CONNECTED");
+            elizaLogger.info("TonConnect session created successfully!");
         }
 
         return this.connector;
     }
 
-    async disconnect(): Promise<boolean> {
-        // if (!this.connector) return false;
-        const cached_wallet = await this.storage.readFromCache<Wallet>("connector_tmp");
-        if (!cached_wallet) return false;
 
+    public async disconnect(): Promise<boolean> {
+        const cached_wallet = await this.storage.readFromCache<Wallet>("CONNECTOR");
+        if (!cached_wallet) return false;
         try {
             this.connector = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage });
             await this.connector.restoreConnection();
-            // if(this.connector.connected)
             await this.connector.disconnect();
-
-            // this.connector = undefined;
-            await this.storage.removeItem("connector_tmp")
-            
+            await this.storage.removeItem("CONNECTOR")            
             return true;
         } catch (error) {
             console.error("Error disconnecting from TonConnect:", error);
@@ -187,33 +163,4 @@ export class TonConnectWalletProvider {
         }
     }
 
-    async getSupportedWallets():Promise<WalletInfo[]>{
-        return this.connector.getWallets()
-    }
-
 }
-
-// export const nativeWalletProvider: Provider = {
-//     async get(
-//         runtime: IAgentRuntime,
-//         // eslint-disable-next-line
-//         _message: Memory,
-//         // eslint-disable-next-line
-//         _state?: State
-//     ): Promise<string | null> {
-//         try {
-//             const walletProvider = new TonConnectWalletProvider(runtime.cacheManager, runtime,runtime.getSetting("MANIFEST_URL"));
-//             // const formattedPortfolio =
-//                 // await walletProvider.getFormattedPortfolio(runtime);
-//             // console.log(formattedPortfolio);
-//             return "";
-//         } catch (error) {
-//             // console.error(
-//             //     `Error in ${PROVIDER_CONFIG.CHAIN_NAME_IN_DEXSCREENER.toUpperCase()} connector provider:`,
-//             //     error,
-//             // );
-//             return null;
-//         }
-//     },
-// };
-
