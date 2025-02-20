@@ -15,6 +15,7 @@ import { generateObjectDeprecated } from "@elizaos/core";
 import { TonConnectWalletProvider } from "../providers/tonConnect";
 import { z } from "zod";
 import TonConnect from "@tonconnect/sdk";
+import { WalletInfo } from "@tonconnect/sdk";
 
 // const tonConnectInitTemplate = `Respond with a JSON markdown block containing only the extracted values. Use null for any values that cannot be determined.
 
@@ -48,6 +49,7 @@ Example response:
 
 Given ONLY the LAST message of the user, extract the name of the desired wallet the user wants to connect to.
 
+{{allWallets}}
 There are such wallets out there: ["", "tonkeeper", "tonhub", "wallet"]. The walletName should always be one of these.
 The walletName is empty string "", if the user did not specify any particular wallet out of the above names. 
 Prefer the empty string if the wallet name is ambiguous. 
@@ -81,9 +83,9 @@ export class InitWalletAction{
     async checkSupportedWallet(walletName: string): Promise<{ universalLink?: string; bridgeUrl?: string } | null> {
         const connector = await this.tonConnectWalletProvider.setConnector();
         const supportedWallets = await this.tonConnectWalletProvider.getSupportedWallets();
-        elizaLogger.info(supportedWallets)
+        elizaLogger.info(supportedWallets[0])
 
-        // if (walletName === "") return {universalLink: undefined, bridgeUrl: undefined};
+        if (walletName === "") return {universalLink: DEFAULT_UNIVERSAL_LINK, bridgeUrl: DEFAULT_BRIDGE_URl};
 
         const wallet = supportedWallets.find(w => w.name.toLowerCase() === walletName.toLowerCase());
     
@@ -106,6 +108,7 @@ const buildWalletDetails= async (
     runtime: IAgentRuntime,
     message: Memory,
     state: State,
+    all_wallet_names: string[],
 ): Promise<WalletHandler> => {
     // let currentState = state;
     // if (!currentState) {
@@ -124,6 +127,8 @@ const buildWalletDetails= async (
         state: state,
         template: initWalletTemplate.replace('{{lastMessage}}',
             message.content.text
+        ).replace('{{allWallets}}', 
+            all_wallet_names.toString()
         ),
     });
 
@@ -134,7 +139,7 @@ const buildWalletDetails= async (
         runtime,
         context: walletContext,
         schema: walletSchema,
-        modelClass: ModelClass.LARGE,
+        modelClass: ModelClass.SMALL,
     });
 
     let walletContent: WalletHandler = content.object as WalletHandler;
@@ -170,21 +175,31 @@ export default {
         } else {
             state = await runtime.updateRecentMessageState(state);
         }
-
-        const walletDetails = await buildWalletDetails(
-            runtime,
-            message,
-            state,
-        );
         const tonConnectProvider = new TonConnectWalletProvider(
             runtime,
             state,
             callback,
             message,
         );
+
+        const all_wallets = await tonConnectProvider.getSupportedWallets();
+        const all_wallet_names = all_wallets.map(item => item.name)
+
+        const walletDetails = await buildWalletDetails(
+            runtime,
+            message,
+            state,
+            all_wallet_names
+        );
+        // const tonConnectProvider = new TonConnectWalletProvider(
+        //     runtime,
+        //     state,
+        //     callback,
+        //     message,
+        // );
         let connector;
-        tonConnectProvider.disconnect()
-        if(walletDetails.walletName === undefined){
+        // tonConnectProvider.disconnect()
+        if(walletDetails.walletName === ""){
             connector = await tonConnectProvider.connect(DEFAULT_UNIVERSAL_LINK, DEFAULT_BRIDGE_URl);
             elizaLogger.info("FRF");
         }
