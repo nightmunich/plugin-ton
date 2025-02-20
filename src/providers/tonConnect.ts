@@ -82,6 +82,7 @@ export class TonConnectWalletProvider {
         // this.state = { connected: false }; // Proper initialization
         this.message = message;
         // super.setCachedData("connector",undefined)
+        this.connector = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage});
     }
 
     async isConnected():Promise<boolean>{
@@ -90,12 +91,28 @@ export class TonConnectWalletProvider {
 
     async setConnector(): Promise<TonConnect>{
         const cached_wallet = await this.storage.readFromCache<Wallet>("connector_tmp");
+        this.connector = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage})
+
         if (cached_wallet) {
             await this.connector.restoreConnection();
-            elizaLogger.info("The connector was cached, restored connection!");
+            elizaLogger.info("[SETCONNECTOR] The connector was cached, restored connection!");
             return this.connector
         }
+
+        elizaLogger.info(await this.connector.getWallets()[0])
+
         this.connector.connect({universalLink: DEFAULT_UNIVERSAL_LINK, bridgeUrl: DEFAULT_BRIDGE_URl});
+        
+        elizaLogger.info("puk")
+
+        elizaLogger.info(await this.connector.getWallets()[0])
+
+
+        const supportedWallets = await this.getSupportedWallets();
+        elizaLogger.info(supportedWallets[0])
+
+        elizaLogger.info("2nd puk")
+
         return this.connector
     }
 
@@ -113,7 +130,7 @@ export class TonConnectWalletProvider {
 
         if (cached_wallet) {
             await this.connector.restoreConnection();
-            elizaLogger.info("The connector was cached, restored connection!");
+            elizaLogger.info("[CONNECT] The connector was cached, restored connection!");
             return this.connector
         }
 
@@ -150,12 +167,19 @@ export class TonConnectWalletProvider {
     }
 
     async disconnect(): Promise<boolean> {
-        if (!this.connector) return false;
+        // if (!this.connector) return false;
+        const cached_wallet = await this.storage.readFromCache<Wallet>("connector_tmp");
+        if (!cached_wallet) return false;
+
         try {
+            this.connector = new TonConnect({ manifestUrl: this.manifestUrl , storage: this.storage });
+            await this.connector.restoreConnection();
+            // if(this.connector.connected)
             await this.connector.disconnect();
 
             // this.connector = undefined;
-            this.storage.removeItem("connector_tmp")
+            await this.storage.removeItem("connector_tmp")
+            
             return true;
         } catch (error) {
             console.error("Error disconnecting from TonConnect:", error);
