@@ -63,7 +63,7 @@ export class InitWalletAction{
         this.tonConnectWalletProvider = tonConnectProvider;
     }
 
-    async getWalletConnectionDetails(walletName: string): Promise<{ universalLink?: string; bridgeUrl?: string }> {
+    async getWalletConnectionDetails(walletName: string): Promise<{ universalLink?: string; bridgeUrl?: string }>{
         await this.tonConnectWalletProvider.setConnector();
         const supportedWallets = await this.tonConnectWalletProvider.getSupportedWallets();
     
@@ -72,10 +72,11 @@ export class InitWalletAction{
         }
     
         const wallet = supportedWallets.find(w => w.name.toLowerCase() === walletName.toLowerCase());
-    
-        return wallet
-            ? { universalLink: wallet.universalLink ?? undefined, bridgeUrl: wallet.bridgeUrl ?? undefined }
-            : {};
+
+        return {
+            universalLink: "universalLink" in wallet ? wallet.universalLink : undefined,
+            bridgeUrl: "bridgeUrl" in wallet ? wallet.bridgeUrl : undefined
+        };
     }     
 }
 
