@@ -33,8 +33,8 @@ Example response:
 
 Given the last message of the user, extract the name of the desired wallet the user wants to connect to.
 
-{{allWallets}}
-There are such wallets out there: ["", "tonkeeper", "tonhub", "wallet"]. The walletName should always be one of these.
+
+There are such wallets out there: {{allWallets}}. The walletName should always be one of these.
 The walletName is empty string "", if the user did not specify any particular wallet out of the above names. 
 Prefer the empty string if the wallet name is ambiguous. 
 Only extract the wallet name based on the LAST user's message.

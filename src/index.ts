@@ -3,7 +3,6 @@ import transferAction from "./actions/transfer.ts";
 import { WalletProvider } from "./providers/wallet.ts";
 import tonConnectInitAction from "./actions/tonConnectInit";
 import tonConnectTransferAction from "./actions/tonConnectTransfer";
-import tonConnectSwitchAction from "./actions/switchTonConnectWallet";
 import tonConnectDisconnectAction from "./actions/tonConnectDisconnect"
 
 import { TonConnectWalletProvider } from "./providers/tonConnect.js";
