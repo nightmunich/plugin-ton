@@ -73,9 +73,14 @@ export class InitWalletAction{
     
         const wallet = supportedWallets.find(w => w.name.toLowerCase() === walletName.toLowerCase());
     
-        return wallet
-            ? { universalLink: wallet.universalLink ?? undefined, bridgeUrl: wallet.bridgeUrl ?? undefined }
-            : {};
+        if ("universalLink" in wallet && "bridgeUrl" in wallet) {
+            return {
+                universalLink: wallet.universalLink, 
+                bridgeUrl: wallet.bridgeUrl           
+            };    
+        }
+
+        return { universalLink: DEFAULT_UNIVERSAL_LINK, bridgeUrl: DEFAULT_BRIDGE_URl };
     }     
 }
 
