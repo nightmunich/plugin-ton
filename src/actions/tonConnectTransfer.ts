@@ -1,10 +1,17 @@
+/**
+ * @description This action enables the transfer of TON tokens from a connected wallet
+ * to another TON wallet address using the TonConnect SDK.
+ * It validates input, ensures wallet connection, initiates the transaction,
+ * and returns transaction details.
+ */
+
 import {
     elizaLogger,
     composeContext,
-    type Content,
-    type HandlerCallback,
     ModelClass,
     generateObject,
+    type HandlerCallback,
+    type Content,
     type IAgentRuntime,
     type Memory,
     type State,

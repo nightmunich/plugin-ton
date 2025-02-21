@@ -1,3 +1,10 @@
+/**
+ * @description This action disconnects the currently connected TonConnect wallet.
+ * It ensures the wallet is disconnected properly, updates the state accordingly,
+ * and notifies the user of the result.
+ * If the wallet is already disconnected, it informs the user
+ */
+
 import { elizaLogger } from "@elizaos/core";
 import {
     type ActionExample,
@@ -49,6 +56,12 @@ export default {
                 })
             }
             return true;
+        }
+        elizaLogger.info("Already disconnected.")
+        if(callback){
+            callback({
+                text: "Already disconnected."
+            })
         }
 
         return false;

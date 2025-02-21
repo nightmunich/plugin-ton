@@ -1,3 +1,10 @@
+/**
+ * @description This class provides functionality to manage TON Connect wallet connections. 
+ * It includes connecting to a wallet, disconnecting from a wallet, and restoring previous sessions. 
+ * The class also handles caching of wallet connections to allow seamless reconnections when necessary. 
+ * It supports initializing the connection, checking wallet support, and handling wallet states through the TonConnect SDK.
+ */
+
 import {
     elizaLogger,
     IAgentRuntime,
