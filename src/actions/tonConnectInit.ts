@@ -1,44 +1,28 @@
-import { elizaLogger, settings } from "@elizaos/core";
+/**
+ * @description This action initializes a connection to a TON wallet using the TonConnect SDK. 
+ * It handles wallet switching and establishes a new connection 
+ * based on the user's request, either with a default wallet or a specified one.
+ */
+
 import {
     type ActionExample,
     type Content,
     type HandlerCallback,
     type IAgentRuntime,
     type Memory,
-    ModelClass,
     type State,
     type Action,
-    generateObject
+    generateObject,
+    composeContext,
+    ModelClass,
+    elizaLogger
 } from "@elizaos/core";
-import { composeContext } from "@elizaos/core";
-import { generateObjectDeprecated } from "@elizaos/core";
-import { TonConnectWalletProvider } from "../providers/tonConnect";
+
 import { z } from "zod";
-import TonConnect from "@tonconnect/sdk";
-import { WalletInfo } from "@tonconnect/sdk";
 
-// const tonConnectInitTemplate = `Respond with a JSON markdown block containing only the extracted values. Use null for any values that cannot be determined.
+import { TonConnectWalletProvider } from "../providers/tonConnect";
 
-// Example response:
-// \`\`\`json
-// {
-//     "recipient": "9jW8FPr6BSSsemWPV22UUCzSqkVdTp6HTyPqeqyuBbCa",
-//     "amount": 1.5
-// }
-// \`\`\`
-
-// {{recentMessages}}
-
-// Extract the following information about the requested SOL transfer:
-// - Recipient wallet address
-// - Amount of SOL to transfer
-// `;
-
-// {{recentMessages}}
-
-// Given the recent messages, extract the name of the desired wallet the user wants to connect to.
-
-const initWalletTemplate = `Respond with a JSON markdown block containing only the extracted values.
+const walletTemplate = `Respond with a JSON markdown block containing only the extracted values.
 
 Example response:
 \`\`\`json
@@ -68,73 +52,56 @@ interface ActionOptions {
     [key: string]: unknown;
 }
 
-export interface WalletHandler extends Content {
+export interface WalletInterface extends Content {
     walletName: string;
 }
 
 export class InitWalletAction{
     private tonConnectWalletProvider: TonConnectWalletProvider;
-    private readonly runtime: IAgentRuntime;
 
     constructor(tonConnectProvider: TonConnectWalletProvider) {
         this.tonConnectWalletProvider = tonConnectProvider;
     }
 
-    async checkSupportedWallet(walletName: string): Promise<{ universalLink?: string; bridgeUrl?: string } | null> {
-        const connector = await this.tonConnectWalletProvider.setConnector();
+    async getWalletConnectionDetails(walletName: string): Promise<{ universalLink?: string; bridgeUrl?: string }> {
+        await this.tonConnectWalletProvider.setConnector();
         const supportedWallets = await this.tonConnectWalletProvider.getSupportedWallets();
-        elizaLogger.info(supportedWallets[0])
-
-        if (walletName === "") return {universalLink: DEFAULT_UNIVERSAL_LINK, bridgeUrl: DEFAULT_BRIDGE_URl};
-
+    
+        if (walletName === "") {
+            return { universalLink: DEFAULT_UNIVERSAL_LINK, bridgeUrl: DEFAULT_BRIDGE_URl };
+        }
+    
         const wallet = supportedWallets.find(w => w.name.toLowerCase() === walletName.toLowerCase());
     
-        if (!wallet) return null; // If no wallet is found, return null
-    
-        if ("universalLink" in wallet && "bridgeUrl" in wallet) {
-            return {
-                universalLink: wallet.universalLink ?? undefined,  // Handle optional property
-                bridgeUrl: wallet.bridgeUrl ?? undefined           // Handle optional property
-            };    
-        }
-        return {
-            universalLink: undefined,
-            bridgeUrl: undefined
-        }
-    }
+        return wallet
+            ? { universalLink: wallet.universalLink ?? undefined, bridgeUrl: wallet.bridgeUrl ?? undefined }
+            : {};
+    }     
 }
 
 const buildWalletDetails = async (
     runtime: IAgentRuntime,
     message: Memory,
     state: State,
-    all_wallet_names: string[],
-): Promise<WalletHandler> => {
-    // let currentState = state;
-    // if (!currentState) {
-    //     currentState = (await runtime.composeState(message)) as State;
-    // } else {
-    //     currentState = await runtime.updateRecentMessageState(currentState);
-    // }
+    all_wallet_names: string[]
+): Promise<WalletInterface> => {
 
+    // Define the schema for the expected output
     const walletSchema = z.object({
         walletName: z.string(),
     });
 
-    // const lastMessage = message.content.text;
-
+    // Compose wallet context
     const walletContext = composeContext({
         state: state,
-        template: initWalletTemplate.replace('{{lastMessage}}',
+        template: walletTemplate.replace('{{lastMessage}}',
             message.content.text
         ).replace('{{allWallets}}', 
             all_wallet_names.toString()
         ),
     });
 
-    elizaLogger.info(walletContext);
-
-    // Generate transfer content with the schema
+    // Generate wallet content with the schema
     const content = await generateObject({
         runtime,
         context: walletContext,
@@ -142,86 +109,65 @@ const buildWalletDetails = async (
         modelClass: ModelClass.SMALL,
     });
 
-    let walletContent: WalletHandler = content.object as WalletHandler;
+    let walletContent: WalletInterface = content.object as WalletInterface;
 
     if (walletContent === undefined) {
-        walletContent = content as unknown as WalletHandler;
+        walletContent = content as unknown as WalletInterface;
     }
 
     return walletContent;
 }
 
-
 export default {
     name: "INIT_TON_CONNECT",
-    similes: ["START_TON_CONNECT", "USE_TON_CONNECT", "TON_CONNECT", "CONNECT_TON_WALLET"],
+    similes: ["START_TON_CONNECT", "USE_TON_CONNECT", "TON_CONNECT", "CONNECT_TON_WALLET", "SWITCH_TON_CONNECT", "SWITCH_TON_WALLET"],
     description: "Initialize TON Connect to connect to a TON wallet.",
+
     validate: async (runtime: IAgentRuntime, message: Memory) => {
-        // Always return true for token transfers, letting the handler deal with specifics
-        elizaLogger.log("Validating token transfer from user:", message.userId);
+        elizaLogger.log("Validating TON Connect request from user:", message.userId);
         return true;
     },
+
     handler: async (
         runtime: IAgentRuntime,
         message: Memory,
         state: State,
-        _options: { [key: string]: unknown },
+        _options: ActionOptions,
         callback?: HandlerCallback
     ): Promise<boolean> => {
-        elizaLogger.log("Starting INIT_TON_CONNECT handler...");
+    elizaLogger.log("Initializing TON Connect...");
 
-        if (!state) {
-            state = (await runtime.composeState(message)) as State;
-        } else {
-            state = await runtime.updateRecentMessageState(state);
-        }
-        const tonConnectProvider = new TonConnectWalletProvider(
-            runtime,
-            state,
-            callback,
-            message,
-        );
+    if (!state) {
+        state = (await runtime.composeState(message)) as State;
+    } else {
+        state = await runtime.updateRecentMessageState(state);
+    }
 
-        const all_wallets = await tonConnectProvider.getSupportedWallets();
-        const all_wallet_names = all_wallets.map(item => item.name)
+    const tonConnectProvider = new TonConnectWalletProvider(runtime, state, callback, message);
+    const allWallets = await tonConnectProvider.getSupportedWallets();
+    const allWalletNames = allWallets.map(item => item.name)
 
-        const walletDetails = await buildWalletDetails(
-            runtime,
-            message,
-            state,
-            all_wallet_names
-        );
-        // const tonConnectProvider = new TonConnectWalletProvider(
-        //     runtime,
-        //     state,
-        //     callback,
-        //     message,
-        // );
-        let connector;
-        // tonConnectProvider.disconnect()
-        if(walletDetails.walletName === ""){
-            connector = await tonConnectProvider.connect(DEFAULT_UNIVERSAL_LINK, DEFAULT_BRIDGE_URl);
-            elizaLogger.info("FRF");
-        }
-        else{
-            const action = new InitWalletAction(tonConnectProvider);
-            const { universalLink, bridgeUrl } = await action.checkSupportedWallet(walletDetails.walletName) || {};
-            await tonConnectProvider.disconnect();
-            connector = await tonConnectProvider.connect(universalLink, bridgeUrl);
-            elizaLogger.info(walletDetails.walletName)
-        }
+    // Extract wallet details from user input
+    const walletDetails = await buildWalletDetails(runtime, message, state, allWalletNames);
 
-        elizaLogger.log("Connected to a TON Wallet via TON Connect.")
-        if (callback) {
-            callback({
-                text: "Successfully connected a TON wallet via TON Connect."
-            })
-        }
+    // Disconnect any existing wallet connection
+    await tonConnectProvider.disconnect();
 
-        return true;
-    },
+    // Retrieve connection details or use default values
+    const { universalLink, bridgeUrl } = walletDetails.walletName
+        ? await new InitWalletAction(tonConnectProvider).getWalletConnectionDetails(walletDetails.walletName)
+        : { universalLink: DEFAULT_UNIVERSAL_LINK, bridgeUrl: DEFAULT_BRIDGE_URl };
 
-    examples: [
+    await tonConnectProvider.connect(universalLink, bridgeUrl);
+
+    elizaLogger.log(`Connected to TON Wallet: ${walletDetails.walletName || "TonKeeper Wallet"}`);
+
+    callback?.({ text: "Successfully connected a TON wallet via TON Connect." });
+
+    return true;
+},
+
+examples: [
         [
             {
                 user: "{{user1}}",
@@ -237,5 +183,95 @@ export default {
                 },
             },
         ],
-    ] as ActionExample[][],
+        [
+            {
+                user: "{{user1}}",
+                content: {
+                    text: "Connect my TON wallet.",
+                },
+            },
+            {
+                user: "{{user2}}",
+                content: {
+                    text: "Connecting your TON wallet...",
+                    action: "INIT_TON_CONNECT",
+                },
+            },
+        ],
+        [
+            {
+                user: "{{user1}}",
+                content: {
+                    text: "I need to log in to my wallet.",
+                },
+            },
+            {
+                user: "{{user2}}",
+                content: {
+                    text: "Setting up your wallet connection...",
+                    action: "INIT_TON_CONNECT",
+                },
+            },
+        ],
+        [
+            {
+                user: "{{user1}}",
+                content: {
+                    text: "Can you connect my Tonkeeper wallet?",
+                },
+            },
+            {
+                user: "{{user2}}",
+                content: {
+                    text: "Connecting to your Tonkeeper wallet...",
+                    action: "INIT_TON_CONNECT",
+                },
+            },
+        ],
+        [
+            {
+                user: "{{user1}}",
+                content: {
+                    text: "I want to switch to Tonhub wallet.",
+                },
+            },
+            {
+                user: "{{user2}}",
+                content: {
+                    text: "Switching to Tonhub wallet...",
+                    action: "INIT_TON_CONNECT",
+                },
+            },
+        ],
+        [
+            {
+                user: "{{user1}}",
+                content: {
+                    text: "I need to change my wallet. Connect to MyTonWallet.",
+                },
+            },
+            {
+                user: "{{user2}}",
+                content: {
+                    text: "Connecting to MyTonWallet...",
+                    action: "INIT_TON_CONNECT",
+                },
+            },
+        ],
+        [
+            {
+                user: "{{user1}}",
+                content: {
+                    text: "Disconnect my current wallet and connect to Tonkeeper.",
+                },
+            },
+            {
+                user: "{{user2}}",
+                content: {
+                    text: "Disconnecting your current wallet and connecting to Tonkeeper...",
+                    action: "INIT_TON_CONNECT",
+                },
+            },
+        ],
+    ] as ActionExample[][]
 } as Action;
