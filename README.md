@@ -97,6 +97,78 @@ const hash = await action.transfer({
 });
 ```
 
+## TonConnect Actions
+
+The TonConnect Actions are responsible for handling interactions with the TON blockchain through the TON Connect protocol. These actions manage wallet connections, wallets switching, and token transfers. Below are the primary TonConnect actions available in this plugin.
+
+### 1. Initialize Wallet Connection (INIT_TON_CONNECT)
+
+The INIT_TON_CONNECT action allows users to initialize a connection with their TON wallet through the TON Connect protocol.
+Description:
+
+This action initiates the connection to a TON wallet using the TON Connect protocol. It allows users to establish a secure connection with their wallets and interact with the blockchain.
+
+```typescript
+import { TonConnectWalletProvider } from '@elizaos/plugin-ton';
+
+const walletProvider = new TonConnectWalletProvider(runtime, state, callback, message);
+
+// If the wallet is already connected, it will restore the session.
+const default_connector = await walletProvider.setConnector(); // Using TonKeeper Wallet by default
+
+// If universal link and bridge url are provided
+const connector = await walletProvider.connect(universalLink: , bridgeUrl: );
+
+```
+
+## Parameters:
+
+- `manifestUrl`: The URL of the TON Connect manifest, required to establish the connection (`TON_CONNECT_MANIFEST_URL`).
+
+## 2. Disconnect from Wallet (DISCONNECT_TON_CONNECT)
+
+The DISCONNECT_TON_CONNECT action is used to disconnect the currently active TON wallet connection.
+
+### Description:
+
+This action disconnects the wallet from the TON Connect protocol. It ensures the session is properly terminated, clears the session data from the cache, and notifies the user.
+
+### Example:
+
+```typescript
+import { TonConnectWalletProvider } from '@elizaos/plugin-ton';
+
+const walletProvider = new TonConnectWalletProvider(runtime, state, callback, message);
+await walletProvider.disconnect(); // Disconnects the current wallet
+```
+
+### Parameters:
+
+None. The action automatically works with the currently connected wallet.
+
+## 3. Transfer Tokens (TRANSFER_TON)
+
+The TRANSFER_TON action enables users to transfer tokens from one TON wallet to another.
+### Description:
+
+This action facilitates the transfer of TON tokens between wallets. It requires a valid recipient address and the amount of tokens to be transferred. The action also handles validation and processing of the transaction.
+### Example:
+
+```typescript
+import { TransferAction } from '@elizaos/plugin-ton';
+
+const action = new TransferAction(walletProvider);
+const hash = await action.transfer({
+    recipient: "EQCGScrZe1xbyWqWDvdI6mzP-GAcAWFv6ZXuaJOuSqemxku4",
+    amount: "1.5",
+});
+```
+
+### Parameters:
+
+- `recipient`: The recipient wallet address.
+- `amount`: The amount of TON tokens to transfer.
+
 ## Development
 
 ### Building
