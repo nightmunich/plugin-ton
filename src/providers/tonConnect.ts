@@ -98,7 +98,7 @@ export class TonConnectWalletProvider {
 
 
     public async setConnector(): Promise<TonConnect>{
-        const cached_wallet = await this.storage.readFromCache<Wallet>("connector_tmp");
+        const cached_wallet = await this.storage.readFromCache<Wallet>("CONNECTOR");
         this.connector = new TonConnect({ 
             manifestUrl: this.manifestUrl, 
             storage: this.storage
