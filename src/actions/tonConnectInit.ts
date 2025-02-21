@@ -129,7 +129,7 @@ export default {
     description: "Initialize TON Connect to connect to a TON wallet.",
 
     validate: async (runtime: IAgentRuntime, message: Memory) => {
-        elizaLogger.log("Validating TON Connect request from user:", message.userId);
+        elizaLogger.info("Validating TON Connect request from user:", message.userId);
         return true;
     },
 
@@ -140,7 +140,7 @@ export default {
         _options: ActionOptions,
         callback?: HandlerCallback
     ): Promise<boolean> => {
-    elizaLogger.log("Initializing TON Connect...");
+    elizaLogger.info("Initializing TON Connect...");
 
     if (!state) {
         state = (await runtime.composeState(message)) as State;
@@ -165,9 +165,7 @@ export default {
 
     await tonConnectProvider.connect(universalLink, bridgeUrl);
 
-    elizaLogger.log(`Connected to TON Wallet: ${walletDetails.walletName || "TonKeeper Wallet"}`);
-
-    callback?.({ text: "Successfully connected a TON wallet via TON Connect." });
+    elizaLogger.info(`Connected to TON Wallet: ${walletDetails.walletName || "TonKeeper Wallet"}`);
 
     return true;
 },
