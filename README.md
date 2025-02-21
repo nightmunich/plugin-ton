@@ -113,11 +113,7 @@ import { TonConnectWalletProvider } from '@elizaos/plugin-ton';
 
 const walletProvider = new TonConnectWalletProvider(runtime, state, callback, message);
 
-// If the wallet is already connected, it will restore the session.
-const default_connector = await walletProvider.setConnector(); // Using TonKeeper Wallet by default
-
-// If universal link and bridge url are provided
-const connector = await walletProvider.connect(universalLink: , bridgeUrl: );
+const connector = await walletProvider.connect(universalLink: string, bridgeUrl: string); // Use TonKeeper by default
 
 ```
 
