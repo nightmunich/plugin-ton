@@ -118,7 +118,7 @@ export class TonConnectWalletProvider {
     }
 
 
-    public async connect(universalLink: string, bridgeUrl: string): Promise<TonConnect> {
+    public async connect(universalLink: string = DEFAULT_UNIVERSAL_LINK, bridgeUrl: string = DEFAULT_BRIDGE_URL): Promise<TonConnect> {
         const cached_wallet = await this.storage.readFromCache<Wallet>("CONNECTOR");
         this.connector = new TonConnect({
             manifestUrl: this.manifestUrl, 
